@@ -17,7 +17,13 @@ $busca = isset($_GET['busca']) ? trim($_GET['busca']) : '';
         <div class="col-md-6">
             <h1 class="display-5 fw-bold text-primary">🖥️ Controle de Máquinas</h1>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-6 text-md-end">
+            <a href="itens_avulsos.php" class="btn btn-info text-white fw-bold">📦 Gerenciar Itens Avulsos</a>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-12">
             <form action="index.php" method="GET" class="d-flex">
                 <input type="text" name="busca" class="form-control me-2" placeholder="Buscar patrimônio ou nome..." value="<?= htmlspecialchars($busca) ?>">
                 <button type="submit" class="btn btn-primary">Buscar</button>
@@ -46,7 +52,6 @@ $busca = isset($_GET['busca']) ? trim($_GET['busca']) : '';
 
     <div class="row">
         <?php
-       
         if ($busca) {
             $sql = "SELECT DISTINCT m.* FROM mesas m LEFT JOIN itens i ON m.id = i.mesa_id 
                     WHERE m.identificacao LIKE :q OR i.nome_personalizado LIKE :q OR i.patrimonio_protocolo LIKE :q ORDER BY m.id DESC";
@@ -95,16 +100,10 @@ $busca = isset($_GET['busca']) ? trim($_GET['busca']) : '';
                                         <?= $item['tipo'] == 'Outros' ? htmlspecialchars($item['nome_personalizado']) : $item['tipo'] ?>
                                     </strong>
                                     <span class="text-muted ms-2">Patrimônio: <?= htmlspecialchars($item['patrimonio_protocolo']) ?></span>
-                                    
-                                    <?php if($em_manutencao): ?>
-                                        <span class="ms-3 text-danger fw-bold small">⚠️ (Aparelho em Manutenção)</span>
-                                    <?php endif; ?>
                                 </div>
                                 
                                 <div class="btn-group">
-                                    <a href="manutencao.php?item_id=<?= $item['id'] ?>" class="btn btn-sm <?= $em_manutencao ? 'btn-danger' : 'btn-outline-dark' ?>" title="Gerenciar Manutenção">
-                                        🛠️ <?= $em_manutencao ? 'Ver Status' : '' ?>
-                                    </a>
+                                    <a href="manutencao.php?item_id=<?= $item['id'] ?>" class="btn btn-sm <?= $em_manutencao ? 'btn-danger' : 'btn-outline-dark' ?>">🛠️</a>
                                     <a href="editar_item.php?id=<?= $item['id'] ?>" class="btn btn-sm btn-link text-decoration-none">Editar</a>
                                     <a href="acoes.php?acao=remover_item&id=<?= $item['id'] ?>" class="btn btn-sm btn-link text-danger text-decoration-none" onclick="return confirm('Remover item?')">Remover</a>
                                 </div>
