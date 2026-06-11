@@ -1,70 +1,87 @@
-<?php 
-include 'config.php';
-?>
+<?php include 'config.php'; ?>
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Itens Avulsos</title>
+    <title>Itens Avulsos | Controle</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .table { border-radius: 12px; overflow: hidden; }
+        .table thead { background: #2d3436; color: white; }
+        .btn-rounded { border-radius: 8px; padding: 8px 16px; }
+    </style>
 </head>
-<body class="bg-light p-4">
-    <div class="container">
-        <a href="index.php" class="btn btn-secondary mb-3">⬅ Voltar ao Painel</a>
-        <h3>Gerenciamento de Itens Avulsos</h3>
+<body class="p-4">
+    <div class="container py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="fw-bold text-dark">📦 Itens Avulsos</h3>
+            <a href="index.php" class="btn btn-outline-secondary btn-rounded">⬅ Voltar ao Painel</a>
+        </div>
         
-        <div class="card mb-4">
-            <div class="card-body">
-                <form action="acoes.php?acao=adicionar_item" method="POST">
+        <div class="card mb-5">
+            <div class="card-body p-4">
+                <form action="acoes.php?acao=adicionar_item" method="POST" class="row g-3 align-items-end">
                     <input type="hidden" name="mesa_id" value=""> 
-                    <div class="row g-3 align-items-end">
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold">Tipo:</label>
-                            <select name="tipo" class="form-select" id="select_tipo" onchange="toggleNome(this.value)">
-                                <option value="Tela">Tela</option>
-                                <option value="CPU">CPU</option>
-                                <option value="Outros">Outros</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3" id="campo_nome_personalizado" style="display:none">
-                            <label class="form-label small fw-bold">Nome do Aparelho:</label>
-                            <input type="text" name="nome_personalizado" id="input_nome" class="form-control">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">Patrimônio/Protocolo:</label>
-                            <input type="text" name="patrimonio" class="form-control" required>
-                        </div>
-                        <div class="col-md-2">
-                            <button type="submit" class="btn btn-primary w-100">Adicionar</button>
-                        </div>
+                    
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold text-muted">Tipo de Equipamento</label>
+                        <select name="tipo" class="form-select border-2" id="select_tipo" onchange="toggleNome(this.value)">
+                            <option value="Tela">Tela</option>
+                            <option value="CPU">CPU</option>
+                            <option value="Piso">Piso</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3" id="campo_nome_personalizado" style="display:none">
+                        <label class="form-label small fw-semibold text-muted">Nome do Aparelho</label>
+                        <input type="text" name="nome_personalizado" id="input_nome" class="form-control border-2">
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold text-muted">Patrimônio / Protocolo</label>
+                        <input type="text" name="patrimonio" class="form-control border-2" required placeholder="Digite o código...">
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100 fw-bold btn-rounded shadow-sm">Adicionar</button>
                     </div>
                 </form>
             </div>
         </div>
 
-        <table class="table table-striped table-hover bg-white shadow-sm border">
-            <thead class="table-dark">
-                <tr>
-                    <th>Tipo</th>
-                    <th>Patrimônio</th>
-                    <th>Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php
-                $stmt = $pdo->query("SELECT * FROM itens WHERE mesa_id IS NULL");
-                while ($item = $stmt->fetch()): ?>
-                <tr>
-                    <td><?= $item['tipo'] == 'Outros' ? htmlspecialchars($item['nome_personalizado']) : $item['tipo'] ?></td>
-                    <td><?= htmlspecialchars($item['patrimonio_protocolo']) ?></td>
-                    <td>
-                        <a href="editar_item.php?id=<?= $item['id'] ?>" class="btn btn-sm btn-warning">Editar</a>
-                        <a href="acoes.php?acao=remover_item&id=<?= $item['id'] ?>" class="btn btn-sm btn-danger" onclick="return confirm('Confirmar exclusão?')">Excluir</a>
-                    </td>
-                </tr>
-                <?php endwhile; ?>
-            </tbody>
-        </table>
+        <div class="card">
+            <div class="card-body p-0">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">Tipo</th>
+                            <th>Patrimônio</th>
+                            <th class="text-end pe-4">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        $stmt = $pdo->query("SELECT * FROM itens WHERE mesa_id IS NULL");
+                        while ($item = $stmt->fetch()): ?>
+                        <tr>
+                            <td class="ps-4 fw-semibold text-secondary">
+                                <?= $item['tipo'] == 'Outros' ? htmlspecialchars($item['nome_personalizado']) : $item['tipo'] ?>
+                            </td>
+                            <td><span class="badge bg-light text-dark border"><?= htmlspecialchars($item['patrimonio_protocolo']) ?></span></td>
+                            <td class="text-end pe-4">
+                                <a href="editar_item.php?id=<?= $item['id'] ?>" class="btn btn-sm btn-outline-warning btn-rounded">Editar</a>
+                                <a href="acoes.php?acao=remover_item&id=<?= $item['id'] ?>" class="btn btn-sm btn-outline-danger btn-rounded" onclick="return confirm('Confirmar exclusão?')">Excluir</a>
+                            </td>
+                        </tr>
+                        <?php endwhile; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <script>
