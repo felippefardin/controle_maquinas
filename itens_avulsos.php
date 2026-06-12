@@ -30,8 +30,7 @@
                         <label class="form-label small fw-semibold text-muted">Tipo de Equipamento</label>
                         <select name="tipo" class="form-select border-2" id="select_tipo" onchange="toggleNome(this.value)">
                             <option value="Tela">Tela</option>
-                            <option value="CPU">CPU</option>
-                            <option value="Piso">Piso</option>
+                            <option value="CPU">CPU</option>                            
                             <option value="Outros">Outros</option>
                         </select>
                     </div>

@@ -42,6 +42,9 @@ $origem = empty($item['mesa_id']) ? 'avulso' : 'mesa';
         <label>Patrimônio / Protocolo:</label>
         <input type="text" name="patrimonio" value="<?= htmlspecialchars($item['patrimonio_protocolo']) ?>" required>
 
+        <label>IP da Máquina:</label>
+        <input type="text" name="ip_maquina" value="<?= htmlspecialchars($item['ip_maquina'] ?? '') ?>">
+
         <button type="submit" class="btn btn-primary">Salvar Alterações</button>
         <a href="<?= ($origem == 'avulso') ? 'itens_avulsos.php' : 'index.php' ?>" class="btn btn-secondary">Cancelar</a>
     </form>

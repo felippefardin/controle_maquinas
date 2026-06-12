@@ -11,6 +11,7 @@ $busca = isset($_GET['busca']) ? trim($_GET['busca']) : '';
         <p class="text-muted">Gerencie o parque tecnológico e as mesas de trabalho.</p>
     </div>
     <div class="col-md-6 text-md-end">
+        <a href="arquivo_mesas.php" class="btn btn-outline-secondary px-4 py-2 fw-bold shadow-sm">🗑️ Arquivo</a>
         <a href="itens_avulsos.php" class="btn btn-outline-info px-4 py-2 fw-bold shadow-sm">📦 Itens Avulsos</a>
     </div>
 </div>
@@ -47,11 +48,12 @@ $busca = isset($_GET['busca']) ? trim($_GET['busca']) : '';
     <?php
     if ($busca) {
         $sql = "SELECT DISTINCT m.* FROM mesas m LEFT JOIN itens i ON m.id = i.mesa_id 
-                WHERE m.identificacao LIKE :q OR i.nome_personalizado LIKE :q OR i.patrimonio_protocolo LIKE :q ORDER BY m.id DESC";
+                WHERE m.status = 'ativo' AND (m.identificacao LIKE :q OR i.nome_personalizado LIKE :q OR i.patrimonio_protocolo LIKE :q) 
+                ORDER BY m.id DESC";
         $stmt = $pdo->prepare($sql);
         $stmt->execute(['q' => "%$busca%"]);
     } else {
-        $stmt = $pdo->query("SELECT * FROM mesas ORDER BY id DESC");
+        $stmt = $pdo->query("SELECT * FROM mesas WHERE status = 'ativo' ORDER BY id DESC");
     }
     $mesas = $stmt->fetchAll();
 
@@ -66,7 +68,10 @@ $busca = isset($_GET['busca']) ? trim($_GET['busca']) : '';
                     <input type="text" name="identificacao" class="form-control form-control-sm border-0 bg-light fw-bold" value="<?= htmlspecialchars($mesa['identificacao']) ?>" required style="width: 150px;">
                     <button type="submit" class="btn btn-sm btn-warning rounded-pill px-3">Salvar</button>
                 </form>
-                <a href="acoes.php?acao=deletar_mesa&id=<?= $mesa['id'] ?>" class="btn btn-sm btn-outline-danger rounded-pill" onclick="return confirm('Excluir mesa permanentemente?')">Excluir Mesa</a>
+                <div>
+                    <a href="historico_mesa.php?id=<?= $mesa['id'] ?>" class="btn btn-sm btn-outline-info rounded-pill me-2">🕒 Histórico</a>
+                    <a href="acoes.php?acao=deletar_mesa&id=<?= $mesa['id'] ?>" class="btn btn-sm btn-outline-danger rounded-pill" onclick="return confirm('Excluir mesa permanentemente?')">Excluir Mesa</a>
+                </div>
             </div>
             <div class="card-body px-4 pb-4 pt-0">
                 <div class="mb-3">
@@ -93,7 +98,10 @@ $busca = isset($_GET['busca']) ? trim($_GET['busca']) : '';
                                 <strong class="<?= $em_manutencao ? 'text-danger' : 'text-dark' ?>">
                                     <?= $item['tipo'] == 'Outros' ? htmlspecialchars($item['nome_personalizado']) : $item['tipo'] ?>
                                 </strong>
-                                <span class="text-muted ms-2 small font-monospace"><?= htmlspecialchars($item['patrimonio_protocolo']) ?></span>
+                                <span class="text-muted ms-2 small font-monospace">
+                                    <?= htmlspecialchars($item['patrimonio_protocolo']) ?>
+                                    <?= !empty($item['ip_maquina']) ? ' | IP: ' . htmlspecialchars($item['ip_maquina']) : '' ?>
+                                </span>
                             </div>
                             
                             <div class="btn-group">
