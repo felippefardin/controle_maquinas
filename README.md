@@ -1,57 +1,40 @@
-🖥️ Controle de Máquinas
-Sistema de gestão de inventário de TI, focado em organização de mesas de trabalho, rastreabilidade de patrimônio e monitoramento de manutenções.
+*Controle de Máquinas: Gestão Inteligente de TI*
+Bem-vindo ao Controle de Máquinas, o sistema ideal para organizar seu inventário de TI com eficiência e precisão. Desenvolvido para facilitar a vida do administrador de sistemas, este projeto centraliza a gestão das estações de trabalho, garantindo que nada passe despercebido.
 
-🚀 Funcionalidades Principais
-Gestão de Mesas: Criação, edição e exclusão de estações de trabalho, incluindo atribuição de Endereço IP diretamente à mesa.
+*Por que este sistema?*
+Diferente de planilhas complexas, nosso sistema foi desenhado para ser intuitivo e rastreável. Com ele, você não apenas gerencia seus equipamentos, mas cria um histórico real de cada movimentação realizada.
 
-Inventário de Itens: Adição e edição de equipamentos (Telas, CPUs, Periféricos) vinculados a mesas ou como itens avulsos.
+*O que você pode fazer com o sistema:*
+- Gestão Dinâmica de Mesas: Crie estações de trabalho e associe o Endereço IP diretamente à mesa, mantendo sua rede organizada.
 
-Auditoria e Logs: Sistema de histórico automático que registra toda e qualquer movimentação:
+- Inventário Descomplicado: Adicione, edite ou remova itens (Monitores, CPUs, Periféricos) com poucos cliques.
 
-Criação e edição de mesas.
+- Auditoria Completa (Histórico de Movimentação): O sistema registra toda e qualquer alteração. Se um IP foi trocado, um patrimônio foi atualizado ou um item foi removido, você terá um registro detalhado de quem, o quê e quando.
 
-Alterações de patrimônio ou tipo de equipamento.
+- Gestão de Manutenção: Acompanhe o ciclo de vida dos seus equipamentos, desde a abertura do chamado até a conclusão, mantendo o histórico de diagnósticos e movimentações sempre à mão.
 
-Remoção de itens.
+- Design Responsivo: A interface, construída com Bootstrap 5, garante que você tenha total controle, seja pelo desktop ou pelo celular.
 
-Início, movimentação e conclusão de manutenções.
+*Estrutura do Banco de Dados*
+Para garantir a integridade e a segurança dos seus dados, utilizamos uma estrutura robusta:
 
-Módulo de Manutenção: Acompanhamento do status dos itens com histórico detalhado por data e hora.
+*mesas:* Armazena as informações da estação e o IP de rede associado.
 
-Busca em Tempo Real: Localize rapidamente equipamentos por nome ou código de patrimônio.
+*itens:* O coração do inventário, onde cada equipamento é rastreado.
 
-🛠️ Tecnologias Utilizadas
-Backend: PHP 8.x com PDO (Segurança contra SQL Injection).
+*manutencoes:* Histórico detalhado de reparos e intervenções técnicas.
 
-Banco de Dados: MySQL.
+*historico_mesas:* Nossa tabela de auditoria, onde cada "clique" importante é transformado em um log permanente.
 
-Frontend: Bootstrap 5 (Design responsivo e moderno).
+*Como colocar para rodar:*
+Clone o projeto em seu servidor local (XAMPP/WAMP).
 
-Arquitetura: index.php centralizador, acoes.php dedicado ao processamento de lógica de negócio e config.php para persistência e logs.
+Importe o arquivo database.sql para criar sua base de dados chamada controle_maquinas.
 
-📋 Como Instalar
-Clone este repositório para a pasta htdocs do seu servidor local (XAMPP/WAMP).
+Configure seu config.php com as credenciais do banco.
 
-Crie um banco de dados chamado controle_maquinas no seu MySQL.
+Acesse o sistema e comece a organizar sua infraestrutura imediatamente.
 
-Importe o arquivo database.sql (certifique-se de que a tabela historico_mesas esteja criada para os logs).
+*"A organização é a chave para uma TI que funciona."*
 
-Configure as credenciais de acesso ao banco no arquivo config.php.
-
-Acesse no seu navegador: http://localhost/controle_maquinas.
-
-🗄️ Estrutura do Banco de Dados
-O sistema utiliza quatro tabelas principais para garantir a integridade dos dados:
-
-mesas: Informações da estação e seu respectivo IP.
-
-itens: Equipamentos e sua vinculação a mesas (ou nulo para itens avulsos).
-
-manutencoes: Registro de defeitos e histórico de reparos.
-
-historico_mesas: Tabela central de auditoria que registra todas as alterações sistêmicas.
-
-💡 Observações de Uso
-O IP agora é vinculado à Mesa. Ao editar os dados de uma mesa ou criar uma nova, você deve definir o IP daquela estação.
-
-O histórico de alterações é gerado automaticamente a cada ação de criar, editar, remover ou manter. Você pode consultar esse histórico clicando no botão 🕒 Histórico de cada mesa.
+*Este projeto é um esforço contínuo de automação. Sinta-se à vontade para explorar as funcionalidades e otimizar cada vez mais o fluxo de trabalho da sua equipe!*
