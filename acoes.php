@@ -4,28 +4,36 @@ $acao = isset($_GET['acao']) ? $_GET['acao'] : '';
 
 // --- MESAS ---
 if ($acao == 'criar_mesa') {
-    $stmt = $pdo->prepare("INSERT INTO mesas (identificacao) VALUES (?)");
-    $stmt->execute([$_POST['identificacao']]);
+    $stmt = $pdo->prepare("INSERT INTO mesas (identificacao, ip_mesa) VALUES (?, ?)");
+    $stmt->execute([$_POST['identificacao'], $_POST['ip_mesa']]);
+    
+    $mesa_id = $pdo->lastInsertId();
+    registrarLog($pdo, $mesa_id, "Mesa criada: {$_POST['identificacao']} com IP: {$_POST['ip_mesa']}");
+    
     header("Location: index.php");
     exit;
 }
 
 if ($acao == 'editar_mesa') {
-    $stmt = $pdo->prepare("UPDATE mesas SET identificacao = ? WHERE id = ?");
-    $stmt->execute([$_POST['identificacao'], $_POST['id']]);
+    $stmtOld = $pdo->prepare("SELECT identificacao, ip_mesa FROM mesas WHERE id = ?");
+    $stmtOld->execute([$_POST['id']]);
+    $old = $stmtOld->fetch();
+
+    $stmt = $pdo->prepare("UPDATE mesas SET identificacao = ?, ip_mesa = ? WHERE id = ?");
+    $stmt->execute([$_POST['identificacao'], $_POST['ip_mesa'], $_POST['id']]);
+
+    if ($old['identificacao'] != $_POST['identificacao'] || $old['ip_mesa'] != $_POST['ip_mesa']) {
+        registrarLog($pdo, $_POST['id'], "Dados da mesa atualizados: Nome '{$old['identificacao']}' -> '{$_POST['identificacao']}', IP '{$old['ip_mesa']}' -> '{$_POST['ip_mesa']}'");
+    }
     header("Location: index.php");
     exit;
 }
 
 if ($acao == 'deletar_mesa') {
-    // 1. Atualiza o status para deletado (Soft Delete)
     $stmt = $pdo->prepare("UPDATE mesas SET status = 'deletado' WHERE id = ?");
     $stmt->execute([$_GET['id']]);
     
-    // 2. Tenta registrar o log (verifique se a função registrarLog está no config.php)
-    if (function_exists('registrarLog')) {
-        registrarLog($pdo, $_GET['id'], "Mesa excluída do sistema.");
-    }
+    registrarLog($pdo, $_GET['id'], "Mesa excluída do sistema.");
     
     header("Location: index.php");
     exit;
@@ -33,47 +41,43 @@ if ($acao == 'deletar_mesa') {
 
 // --- ITENS ---
 if ($acao == 'adicionar_item') {
-    // 1. Define o mesa_id corretamente, tratando caso seja nulo
     $mesa_id = (!empty($_POST['mesa_id']) && $_POST['mesa_id'] != '0') ? $_POST['mesa_id'] : null;
     
-    // 2. Insere apenas uma vez com todos os campos
-    $stmt = $pdo->prepare("INSERT INTO itens (mesa_id, tipo, nome_personalizado, patrimonio_protocolo, ip_maquina) VALUES (?, ?, ?, ?, ?)");
+    $stmt = $pdo->prepare("INSERT INTO itens (mesa_id, tipo, nome_personalizado, patrimonio_protocolo) VALUES (?, ?, ?, ?)");
     $stmt->execute([
         $mesa_id, 
         $_POST['tipo'], 
         $_POST['nome_personalizado'], 
-        $_POST['patrimonio'], 
-        $_POST['ip_maquina'] // Certifique-se de que este campo vem do formulário
+        $_POST['patrimonio']
     ]);
     
-    // 3. Redireciona corretamente
+    if ($mesa_id) {
+        registrarLog($pdo, $mesa_id, "Item adicionado: {$_POST['tipo']} (Patrimônio: {$_POST['patrimonio']})");
+    }
+    
     $url_retorno = ($mesa_id === null) ? "itens_avulsos.php" : "index.php";
     header("Location: $url_retorno");
     exit;
 }
 
 if ($acao == 'editar_item') {
-    // 1. Busca os dados atuais ANTES da atualização para comparar
     $stmtBusca = $pdo->prepare("SELECT * FROM itens WHERE id = ?");
     $stmtBusca->execute([$_POST['id']]);
     $itemAntigo = $stmtBusca->fetch();
 
-    // 2. Monta as mudanças
     $mudancas = [];
-    if ($itemAntigo['ip_maquina'] != $_POST['ip_maquina']) {
-        $mudancas[] = "IP: {$itemAntigo['ip_maquina']} -> {$_POST['ip_maquina']}";
-    }
     if ($itemAntigo['patrimonio_protocolo'] != $_POST['patrimonio']) {
         $mudancas[] = "Patrimônio: {$itemAntigo['patrimonio_protocolo']} -> {$_POST['patrimonio']}";
     }
+    if ($itemAntigo['tipo'] != $_POST['tipo']) {
+        $mudancas[] = "Tipo: {$itemAntigo['tipo']} -> {$_POST['tipo']}";
+    }
 
-    // 3. Executa a atualização
-    $stmt = $pdo->prepare("UPDATE itens SET tipo = ?, nome_personalizado = ?, patrimonio_protocolo = ?, ip_maquina = ? WHERE id = ?");
-    $stmt->execute([$_POST['tipo'], $_POST['nome_personalizado'], $_POST['patrimonio'], $_POST['ip_maquina'], $_POST['id']]);
+    $stmt = $pdo->prepare("UPDATE itens SET tipo = ?, nome_personalizado = ?, patrimonio_protocolo = ? WHERE id = ?");
+    $stmt->execute([$_POST['tipo'], $_POST['nome_personalizado'], $_POST['patrimonio'], $_POST['id']]);
 
-    // 4. Se houve mudança, registra no log da mesa
     if (!empty($mudancas)) {
-        $msg = "Item " . $itemAntigo['tipo'] . " alterado: " . implode(", ", $mudancas);
+        $msg = "Item {$itemAntigo['tipo']} alterado: " . implode(", ", $mudancas);
         registrarLog($pdo, $itemAntigo['mesa_id'], $msg);
     }
 
@@ -82,13 +86,16 @@ if ($acao == 'editar_item') {
 }
 
 if ($acao == 'remover_item') {
-    // Busca o item antes de remover para saber onde redirecionar
-    $stmtBusca = $pdo->prepare("SELECT mesa_id FROM itens WHERE id = ?");
+    $stmtBusca = $pdo->prepare("SELECT mesa_id, tipo, patrimonio_protocolo FROM itens WHERE id = ?");
     $stmtBusca->execute([$_GET['id']]);
     $item = $stmtBusca->fetch();
     
     $stmt = $pdo->prepare("DELETE FROM itens WHERE id = ?");
     $stmt->execute([$_GET['id']]);
+    
+    if ($item['mesa_id']) {
+        registrarLog($pdo, $item['mesa_id'], "Item removido: {$item['tipo']} (Patrimônio: {$item['patrimonio_protocolo']})");
+    }
     
     $url_retorno = (empty($item['mesa_id'])) ? "itens_avulsos.php" : "index.php";
     header("Location: $url_retorno");
@@ -103,6 +110,13 @@ if ($acao == 'iniciar_manutencao') {
     $stmtM = $pdo->prepare("INSERT INTO manutencoes (item_id, descricao_problema, status_manutencao) VALUES (?, ?, 'Aberto')");
     $stmtM->execute([$_POST['item_id'], $_POST['problema']]);
 
+    // Busca mesa_id para o log
+    $stmtI = $pdo->prepare("SELECT mesa_id FROM itens WHERE id = ?");
+    $stmtI->execute([$_POST['item_id']]);
+    $item = $stmtI->fetch();
+    
+    registrarLog($pdo, $item['mesa_id'], "Manutenção iniciada. Problema: {$_POST['problema']}");
+
     header("Location: index.php");
     exit;
 }
@@ -114,6 +128,12 @@ if ($acao == 'concluir_manutencao') {
     $stmtM = $pdo->prepare("UPDATE manutencoes SET status_manutencao = 'Concluído', data_fim = NOW() WHERE id = ?");
     $stmtM->execute([$_POST['manutencao_id']]);
 
+    $stmtI = $pdo->prepare("SELECT mesa_id FROM itens WHERE id = ?");
+    $stmtI->execute([$_POST['item_id']]);
+    $item = $stmtI->fetch();
+
+    registrarLog($pdo, $item['mesa_id'], "Manutenção concluída.");
+
     header("Location: index.php");
     exit;
 }
@@ -121,14 +141,21 @@ if ($acao == 'concluir_manutencao') {
 if ($acao == 'registrar_movimento') {
     $novo_movimento = "[" . date('d/m/Y H:i') . "] - " . $_POST['movimento'] . "\n";
 
-    $stmt = $pdo->prepare("SELECT movimentacoes FROM manutencoes WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT movimentacoes, item_id FROM manutencoes WHERE id = ?");
     $stmt->execute([$_POST['manutencao_id']]);
-    $atual = $stmt->fetchColumn();
+    $manutencao = $stmt->fetch();
     
-    $final = $atual . $novo_movimento;
+    $final = $manutencao['movimentacoes'] . $novo_movimento;
 
     $stmtU = $pdo->prepare("UPDATE manutencoes SET movimentacoes = ? WHERE id = ?");
     $stmtU->execute([$final, $_POST['manutencao_id']]);
+    
+    // Log no histórico da mesa
+    $stmtI = $pdo->prepare("SELECT mesa_id FROM itens WHERE id = ?");
+    $stmtI->execute([$manutencao['item_id']]);
+    $mesa_id = $stmtI->fetchColumn();
+    
+    registrarLog($pdo, $mesa_id, "Nova movimentação de manutenção: {$_POST['movimento']}");
 
     header("Location: manutencao.php?item_id=" . $_POST['item_id']);
     exit;

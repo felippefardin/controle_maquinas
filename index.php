@@ -31,16 +31,16 @@ $busca = isset($_GET['busca']) ? trim($_GET['busca']) : '';
 <div class="card mb-5 shadow-sm border-0 bg-white rounded-4 overflow-hidden">
     <div class="card-body p-4">
         <form action="acoes.php?acao=criar_mesa" method="POST" class="row g-3 align-items-center">
-            <div class="col-auto">
-                <label class="fw-bold text-secondary">Nova Mesa:</label>
-            </div>
-            <div class="col-sm-4">
-                <input type="text" name="identificacao" class="form-control rounded-pill" placeholder="Ex: Mesa 10 ou RH" required>
-            </div>
-            <div class="col-auto">
-                <button type="submit" class="btn btn-success fw-bold px-4 rounded-pill">+ Criar Mesa</button>
-            </div>
-        </form>
+    <div class="col-sm-4">
+        <input type="text" name="identificacao" class="form-control rounded-pill" placeholder="Nome da Mesa (ex: Mesa 10)" required>
+    </div>
+    <div class="col-sm-3">
+        <input type="text" name="ip_mesa" class="form-control rounded-pill" placeholder="IP da Mesa (Opcional)">
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-success fw-bold px-4 rounded-pill">+ Criar Mesa</button>
+    </div>
+</form>
     </div>
 </div>
 
@@ -65,6 +65,7 @@ $busca = isset($_GET['busca']) ? trim($_GET['busca']) : '';
                 <form action="acoes.php?acao=editar_mesa" method="POST" class="d-flex gap-2 align-items-center">
                     <input type="hidden" name="id" value="<?= $mesa['id'] ?>">
                     <span class="text-uppercase small fw-bold text-secondary">Mesa:</span>
+                    <input type="text" name="ip_mesa" class="form-control form-control-sm" value="<?= htmlspecialchars($mesa['ip_mesa'] ?? '') ?>" placeholder="IP da Mesa" style="width: 120px;">
                     <input type="text" name="identificacao" class="form-control form-control-sm border-0 bg-light fw-bold" value="<?= htmlspecialchars($mesa['identificacao']) ?>" required style="width: 150px;">
                     <button type="submit" class="btn btn-sm btn-warning rounded-pill px-3">Salvar</button>
                 </form>
