@@ -21,6 +21,18 @@
             <a href="index.php" class="btn btn-outline-secondary btn-rounded">⬅ Voltar ao Painel</a>
         </div>
         
+        <div class="card mb-4">
+            <div class="card-body p-3">
+                <form action="itens_avulsos.php" method="GET" class="d-flex gap-2">
+                    <input type="text" name="busca" class="form-control" placeholder="Buscar por patrimônio ou nome..." value="<?= htmlspecialchars($_GET['busca'] ?? '') ?>">
+                    <button type="submit" class="btn btn-primary">🔍 Buscar</button>
+                    <?php if(!empty($_GET['busca'])): ?>
+                        <a href="itens_avulsos.php" class="btn btn-link">Limpar</a>
+                    <?php endif; ?>
+                </form>
+            </div>
+        </div>
+        
         <div class="card mb-5">
             <div class="card-body p-4">
                 <form action="acoes.php?acao=adicionar_item" method="POST" class="row g-3 align-items-end">
@@ -64,7 +76,14 @@
                     </thead>
                     <tbody>
                         <?php
-                        $stmt = $pdo->query("SELECT * FROM itens WHERE mesa_id IS NULL");
+                        $busca = $_GET['busca'] ?? '';
+                        if ($busca) {
+                            $stmt = $pdo->prepare("SELECT * FROM itens WHERE mesa_id IS NULL AND (patrimonio_protocolo LIKE ? OR nome_personalizado LIKE ?)");
+                            $stmt->execute(["%$busca%", "%$busca%"]);
+                        } else {
+                            $stmt = $pdo->query("SELECT * FROM itens WHERE mesa_id IS NULL");
+                        }
+                        
                         while ($item = $stmt->fetch()): ?>
                         <tr>
                             <td class="ps-4 fw-semibold text-secondary">

@@ -8,10 +8,10 @@ $busca = isset($_GET['busca']) ? trim($_GET['busca']) : '';
 <div class="row mb-5 align-items-center">   
     <div class="col-md-6">
         <h1 class="fw-bolder text-dark display-6">🖥️ Controle de Máquinas </h1>
-        <p class="text-muted">Gerencie o parque tecnológico e as mesas de trabalho.</p>
+        <p class="text-muted">Gerenciamento de mesas de trabalho.</p>
     </div>
     <div class="col-md-6 text-md-end">
-        <a href="arquivo_mesas.php" class="btn btn-outline-secondary px-4 py-2 fw-bold shadow-sm">🗑️ Arquivo</a>
+        <a href="arquivo_mesas.php" class="btn btn-outline-secondary px-4 py-2 fw-bold shadow-sm">Arquivo</a>
         <a href="itens_avulsos.php" class="btn btn-outline-info px-4 py-2 fw-bold shadow-sm">📦 Itens Avulsos</a>
     </div>
 </div>
