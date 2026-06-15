@@ -43,12 +43,14 @@ if ($acao == 'deletar_mesa') {
 if ($acao == 'adicionar_item') {
     $mesa_id = (!empty($_POST['mesa_id']) && $_POST['mesa_id'] != '0') ? $_POST['mesa_id'] : null;
     
-    $stmt = $pdo->prepare("INSERT INTO itens (mesa_id, tipo, nome_personalizado, patrimonio_protocolo) VALUES (?, ?, ?, ?)");
+    // Ajustado para incluir o ip_maquina
+    $stmt = $pdo->prepare("INSERT INTO itens (mesa_id, tipo, nome_personalizado, patrimonio_protocolo, ip_maquina) VALUES (?, ?, ?, ?, ?)");
     $stmt->execute([
         $mesa_id, 
         $_POST['tipo'], 
         $_POST['nome_personalizado'], 
-        $_POST['patrimonio']
+        $_POST['patrimonio'],
+        $_POST['ip_maquina'] ?? ''
     ]);
     
     if ($mesa_id) {
@@ -73,8 +75,9 @@ if ($acao == 'editar_item') {
         $mudancas[] = "Tipo: {$itemAntigo['tipo']} -> {$_POST['tipo']}";
     }
 
-    $stmt = $pdo->prepare("UPDATE itens SET tipo = ?, nome_personalizado = ?, patrimonio_protocolo = ? WHERE id = ?");
-    $stmt->execute([$_POST['tipo'], $_POST['nome_personalizado'], $_POST['patrimonio'], $_POST['id']]);
+    // AJUSTE AQUI: Adicionado ip_maquina = ? no SQL e no execute
+    $stmt = $pdo->prepare("UPDATE itens SET tipo = ?, nome_personalizado = ?, patrimonio_protocolo = ?, ip_maquina = ? WHERE id = ?");
+    $stmt->execute([$_POST['tipo'], $_POST['nome_personalizado'], $_POST['patrimonio'], $_POST['ip_maquina'], $_POST['id']]);
 
     if (!empty($mudancas)) {
         $msg = "Item {$itemAntigo['tipo']} alterado: " . implode(", ", $mudancas);
@@ -110,7 +113,6 @@ if ($acao == 'iniciar_manutencao') {
     $stmtM = $pdo->prepare("INSERT INTO manutencoes (item_id, descricao_problema, status_manutencao) VALUES (?, ?, 'Aberto')");
     $stmtM->execute([$_POST['item_id'], $_POST['problema']]);
 
-    // Busca mesa_id para o log
     $stmtI = $pdo->prepare("SELECT mesa_id FROM itens WHERE id = ?");
     $stmtI->execute([$_POST['item_id']]);
     $item = $stmtI->fetch();
@@ -150,7 +152,6 @@ if ($acao == 'registrar_movimento') {
     $stmtU = $pdo->prepare("UPDATE manutencoes SET movimentacoes = ? WHERE id = ?");
     $stmtU->execute([$final, $_POST['manutencao_id']]);
     
-    // Log no histórico da mesa
     $stmtI = $pdo->prepare("SELECT mesa_id FROM itens WHERE id = ?");
     $stmtI->execute([$manutencao['item_id']]);
     $mesa_id = $stmtI->fetchColumn();

@@ -36,10 +36,10 @@ if (!$mesa) {
                 <div class="card-header bg-primary text-white py-3">
                     <h5 class="mb-0">📍 Gerenciar Mesa: <?= htmlspecialchars($mesa['identificacao']) ?></h5>
                 </div>
-                <div class="mb-3">
-    <label for="ip_maquina" class="form-label fw-bold">Endereço IP (Opcional)</label>
-    <input type="text" name="ip_maquina" id="ip_maquina" class="form-control" placeholder="Ex: 192.168.1.100">
-</div>
+                <!-- <div class="mb-3">
+                    <label for="ip_maquina" class="form-label fw-bold">Endereço IP (Opcional)</label>
+                    <input type="text" name="ip_maquina" id="ip_maquina" class="form-control" placeholder="Ex: 192.168.1.100">
+                </div> -->
                 <div class="card-body p-4">
                     <h6 class="card-subtitle mb-4 text-muted">Adicionar novo equipamento à mesa</h6>
                     

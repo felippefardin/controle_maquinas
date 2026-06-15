@@ -5,9 +5,9 @@ include 'header.php';
 $busca = isset($_GET['busca']) ? trim($_GET['busca']) : '';
 ?>
 
-<div class="row mb-5 align-items-center">
+<div class="row mb-5 align-items-center">   
     <div class="col-md-6">
-        <h1 class="fw-bolder text-dark display-6">🖥️ Controle de Máquinas</h1>
+        <h1 class="fw-bolder text-dark display-6">🖥️ Controle de Máquinas </h1>
         <p class="text-muted">Gerencie o parque tecnológico e as mesas de trabalho.</p>
     </div>
     <div class="col-md-6 text-md-end">
@@ -31,16 +31,16 @@ $busca = isset($_GET['busca']) ? trim($_GET['busca']) : '';
 <div class="card mb-5 shadow-sm border-0 bg-white rounded-4 overflow-hidden">
     <div class="card-body p-4">
         <form action="acoes.php?acao=criar_mesa" method="POST" class="row g-3 align-items-center">
-    <div class="col-sm-4">
-        <input type="text" name="identificacao" class="form-control rounded-pill" placeholder="Nome da Mesa (ex: Mesa 10)" required>
-    </div>
-    <div class="col-sm-3">
-        <input type="text" name="ip_mesa" class="form-control rounded-pill" placeholder="IP da Mesa (Opcional)">
-    </div>
-    <div class="col-auto">
-        <button type="submit" class="btn btn-success fw-bold px-4 rounded-pill">+ Criar Mesa</button>
-    </div>
-</form>
+            <div class="col-sm-4">
+                <input type="text" name="identificacao" class="form-control rounded-pill" placeholder="Nome da Mesa (ex: Mesa 10)" required>
+            </div>
+            <!-- <div class="col-sm-3">
+                <input type="text" name="ip_mesa" class="form-control rounded-pill" placeholder="IP da Mesa (Opcional)">
+            </div> -->
+            <div class="col-auto">
+                <button type="submit" class="btn btn-success fw-bold px-4 rounded-pill">+ Criar Mesa</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -63,11 +63,12 @@ $busca = isset($_GET['busca']) ? trim($_GET['busca']) : '';
         <div class="card mesa-card shadow-sm border-0 rounded-4">
             <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-4 border-0">
                 <form action="acoes.php?acao=editar_mesa" method="POST" class="d-flex gap-2 align-items-center">
-                    <input type="hidden" name="id" value="<?= $mesa['id'] ?>">
-                    <span class="text-uppercase small fw-bold text-secondary">Mesa:</span>
-                    <input type="text" name="ip_mesa" class="form-control form-control-sm" value="<?= htmlspecialchars($mesa['ip_mesa'] ?? '') ?>" placeholder="IP da Mesa" style="width: 120px;">
-                    <input type="text" name="identificacao" class="form-control form-control-sm border-0 bg-light fw-bold" value="<?= htmlspecialchars($mesa['identificacao']) ?>" required style="width: 150px;">
-                    <button type="submit" class="btn btn-sm btn-warning rounded-pill px-3">Salvar</button>
+                    <!-- <input type="hidden" name="id" value="<?= $mesa['id'] ?>"> -->
+                    <!-- <span class="text-uppercase small fw-bold text-secondary">Mesa:</span>  -->
+                    
+                    <!-- <input type="text" name="ip_mesa" class="form-control form-control-sm" value="<?= htmlspecialchars($mesa['ip_mesa'] ?? '') ?>" placeholder="IP da Mesa" style="width: 120px;"> -->
+                    <!-- <input type="text" name="identificacao" class="form-control form-control-sm border-0 bg-light fw-bold" value="<?= htmlspecialchars($mesa['identificacao']) ?>" required style="width: 150px;"> -->
+                    <!-- <button type="submit" class="btn btn-sm btn-warning rounded-pill px-3">Salvar</button> -->
                 </form>
                 <div>
                     <a href="historico_mesa.php?id=<?= $mesa['id'] ?>" class="btn btn-sm btn-outline-info rounded-pill me-2">🕒 Histórico</a>
@@ -106,6 +107,9 @@ $busca = isset($_GET['busca']) ? trim($_GET['busca']) : '';
                             </div>
                             
                             <div class="btn-group">
+                                <?php if (!empty($item['ip_maquina'])): ?>
+                                    <a href="rdp://<?= htmlspecialchars($item['ip_maquina']) ?>" class="btn btn-sm btn-outline-primary rounded-pill px-3 me-1" title="Acessar via RDP">🖥️</a>
+                                <?php endif; ?>
                                 <a href="manutencao.php?item_id=<?= $item['id'] ?>" class="btn btn-sm <?= $em_manutencao ? 'btn-danger' : 'btn-outline-dark' ?> rounded-pill px-3 me-1">🛠️</a>
                                 <a href="editar_item.php?id=<?= $item['id'] ?>" class="btn btn-sm btn-link text-decoration-none text-muted">Editar</a>
                                 <a href="acoes.php?acao=remover_item&id=<?= $item['id'] ?>" class="btn btn-sm btn-link text-danger text-decoration-none" onclick="return confirm('Remover item?')">Remover</a>
