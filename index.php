@@ -7,7 +7,7 @@ $busca = isset($_GET['busca']) ? trim($_GET['busca']) : '';
 
 <div class="row mb-5 align-items-center">   
     <div class="col-md-6">
-        <h1 class="fw-bolder text-dark display-6">🖥️ Controle de Máquinas </h1>
+        <h1 class="fw-bolder text-dark display-6">Controle de Máquinas </h1>
         <p class="text-muted">Gerenciamento de mesas de trabalho.</p>
     </div>
     <div class="col-md-6 text-md-end">
@@ -15,7 +15,6 @@ $busca = isset($_GET['busca']) ? trim($_GET['busca']) : '';
         <a href="itens_avulsos.php" class="btn btn-outline-info px-4 py-2 fw-bold shadow-sm">📦 Itens Avulsos</a>
     </div>
 </div>
-
 <div class="row mb-5">
     <div class="col-md-12">
         <form action="index.php" method="GET" class="d-flex bg-white p-2 rounded-pill shadow-sm border">
