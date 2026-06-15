@@ -161,4 +161,11 @@ if ($acao == 'registrar_movimento') {
     header("Location: manutencao.php?item_id=" . $_POST['item_id']);
     exit;
 }
+
+if ($acao == 'salvar_ip_item') {
+    $stmt = $pdo->prepare("UPDATE itens SET ip_maquina = ? WHERE id = ?");
+    $stmt->execute([$_POST['ip_maquina'], $_POST['item_id']]);
+    header("Location: index.php");
+    exit;
+}
 ?>
