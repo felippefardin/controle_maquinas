@@ -14,16 +14,17 @@ if ($acao == 'criar_mesa') {
     exit;
 }
 
+// --- MESAS ---
 if ($acao == 'editar_mesa') {
-    $stmtOld = $pdo->prepare("SELECT identificacao, ip_mesa FROM mesas WHERE id = ?");
+    $stmtOld = $pdo->prepare("SELECT identificacao FROM mesas WHERE id = ?");
     $stmtOld->execute([$_POST['id']]);
     $old = $stmtOld->fetch();
 
-    $stmt = $pdo->prepare("UPDATE mesas SET identificacao = ?, ip_mesa = ? WHERE id = ?");
-    $stmt->execute([$_POST['identificacao'], $_POST['ip_mesa'], $_POST['id']]);
+    $stmt = $pdo->prepare("UPDATE mesas SET identificacao = ? WHERE id = ?");
+    $stmt->execute([$_POST['identificacao'], $_POST['id']]);
 
-    if ($old['identificacao'] != $_POST['identificacao'] || $old['ip_mesa'] != $_POST['ip_mesa']) {
-        registrarLog($pdo, $_POST['id'], "Dados da mesa atualizados: Nome '{$old['identificacao']}' -> '{$_POST['identificacao']}', IP '{$old['ip_mesa']}' -> '{$_POST['ip_mesa']}'");
+    if ($old['identificacao'] != $_POST['identificacao']) {
+        registrarLog($pdo, $_POST['id'], "Nome da mesa alterado: '{$old['identificacao']}' -> '{$_POST['identificacao']}'");
     }
     header("Location: index.php");
     exit;
@@ -62,26 +63,62 @@ if ($acao == 'adicionar_item') {
     exit;
 }
 
+// --- ITENS ---
 if ($acao == 'editar_item') {
     $stmtBusca = $pdo->prepare("SELECT * FROM itens WHERE id = ?");
     $stmtBusca->execute([$_POST['id']]);
     $itemAntigo = $stmtBusca->fetch();
 
     $mudancas = [];
+    
+    // Verifica mudança de patrimônio
     if ($itemAntigo['patrimonio_protocolo'] != $_POST['patrimonio']) {
         $mudancas[] = "Patrimônio: {$itemAntigo['patrimonio_protocolo']} -> {$_POST['patrimonio']}";
     }
-    if ($itemAntigo['tipo'] != $_POST['tipo']) {
-        $mudancas[] = "Tipo: {$itemAntigo['tipo']} -> {$_POST['tipo']}";
+    
+    // Verifica mudança de IP
+    if ($itemAntigo['ip_maquina'] != $_POST['ip_maquina']) {
+        $mudancas[] = "IP: {$itemAntigo['ip_maquina']} -> {$_POST['ip_maquina']}";
     }
 
-    // AJUSTE AQUI: Adicionado ip_maquina = ? no SQL e no execute
-    $stmt = $pdo->prepare("UPDATE itens SET tipo = ?, nome_personalizado = ?, patrimonio_protocolo = ?, ip_maquina = ? WHERE id = ?");
-    $stmt->execute([$_POST['tipo'], $_POST['nome_personalizado'], $_POST['patrimonio'], $_POST['ip_maquina'], $_POST['id']]);
+    // Verifica mudança de Mesa
+    if ($itemAntigo['mesa_id'] != $_POST['mesa_id']) {
+        // Busca nomes das mesas para o log ficar legível
+        $oldMesaName = "Avulso";
+        if ($itemAntigo['mesa_id']) {
+            $stmtM = $pdo->prepare("SELECT identificacao FROM mesas WHERE id = ?");
+            $stmtM->execute([$itemAntigo['mesa_id']]);
+            $m = $stmtM->fetch();
+            $oldMesaName = $m['identificacao'];
+        }
+        
+        $newMesaName = "Avulso";
+        if (!empty($_POST['mesa_id'])) {
+            $stmtM = $pdo->prepare("SELECT identificacao FROM mesas WHERE id = ?");
+            $stmtM->execute([$_POST['mesa_id']]);
+            $m = $stmtM->fetch();
+            $newMesaName = $m['identificacao'];
+        }
+        
+        $mudancas[] = "Mesa: {$oldMesaName} -> {$newMesaName}";
+    }
 
+    // Executa a atualização no banco incluindo mesa_id
+    $stmt = $pdo->prepare("UPDATE itens SET mesa_id = ?, tipo = ?, nome_personalizado = ?, patrimonio_protocolo = ?, ip_maquina = ? WHERE id = ?");
+    $stmt->execute([
+        !empty($_POST['mesa_id']) ? $_POST['mesa_id'] : null, 
+        $_POST['tipo'], 
+        $_POST['nome_personalizado'], 
+        $_POST['patrimonio'], 
+        $_POST['ip_maquina'], 
+        $_POST['id']
+    ]);
+
+    // Registra o log no histórico da mesa nova (ou da antiga se for remoção)
     if (!empty($mudancas)) {
-        $msg = "Item {$itemAntigo['tipo']} alterado: " . implode(", ", $mudancas);
-        registrarLog($pdo, $itemAntigo['mesa_id'], $msg);
+        $msg = "Item {$itemAntigo['tipo']} ({$itemAntigo['patrimonio_protocolo']}) alterado: " . implode(", ", $mudancas);
+        // Registra no histórico da mesa que recebeu a alteração
+        registrarLog($pdo, !empty($_POST['mesa_id']) ? $_POST['mesa_id'] : $itemAntigo['mesa_id'], $msg);
     }
 
     header("Location: " . ($_POST['origem'] == 'avulso' ? "itens_avulsos.php" : "index.php"));
@@ -163,8 +200,15 @@ if ($acao == 'registrar_movimento') {
 }
 
 if ($acao == 'salvar_ip_item') {
+    $stmtBusca = $pdo->prepare("SELECT mesa_id, tipo, patrimonio_protocolo, ip_maquina FROM itens WHERE id = ?");
+    $stmtBusca->execute([$_POST['item_id']]);
+    $item = $stmtBusca->fetch();
+
     $stmt = $pdo->prepare("UPDATE itens SET ip_maquina = ? WHERE id = ?");
     $stmt->execute([$_POST['ip_maquina'], $_POST['item_id']]);
+    
+    registrarLog($pdo, $item['mesa_id'], "IP do item {$item['tipo']} ({$item['patrimonio_protocolo']}) alterado: '{$item['ip_maquina']}' -> '{$_POST['ip_maquina']}'");
+    
     header("Location: index.php");
     exit;
 }

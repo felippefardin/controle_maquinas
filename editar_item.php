@@ -17,7 +17,7 @@ $origem = empty($item['mesa_id']) ? 'avulso' : 'mesa';
     <link rel="stylesheet" href="style.css">
     <style>
         body { font-family: sans-serif; padding: 20px; line-height: 1.6; }
-        form { background: #eee; padding: 20px; border-radius: 8px; display: inline-block; min-width: 300px; }
+        form { background: #eee; padding: 20px; border-radius: 8px; display: inline-block; min-width: 350px; }
         input, select { display: block; margin-bottom: 10px; padding: 8px; width: 100%; }
     </style>
 </head>
@@ -38,6 +38,18 @@ $origem = empty($item['mesa_id']) ? 'avulso' : 'mesa';
             <label>Nome do Item:</label>
             <input type="text" name="nome_personalizado" value="<?= htmlspecialchars($item['nome_personalizado'] ?? '') ?>">
         </div>
+
+        <label>Vincular à Mesa:</label>
+        <select name="mesa_id">
+            <option value="">Nenhuma (Avulso)</option>
+            <?php
+            $mesas = $pdo->query("SELECT id, identificacao FROM mesas WHERE status = 'ativo'")->fetchAll();
+            foreach($mesas as $m) {
+                $selected = ($item['mesa_id'] == $m['id']) ? 'selected' : '';
+                echo "<option value='{$m['id']}' {$selected}>" . htmlspecialchars($m['identificacao']) . "</option>";
+            }
+            ?>
+        </select>
 
         <label>Patrimônio / Protocolo:</label>
         <input type="text" name="patrimonio" value="<?= htmlspecialchars($item['patrimonio_protocolo']) ?>" required>
