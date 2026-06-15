@@ -39,7 +39,7 @@ $origem = empty($item['mesa_id']) ? 'avulso' : 'mesa';
             <input type="text" name="nome_personalizado" value="<?= htmlspecialchars($item['nome_personalizado'] ?? '') ?>">
         </div>
 
-        <label>Vincular à Mesa:</label>
+        <!-- <label>Vincular à Mesa:</label>
         <select name="mesa_id">
             <option value="">Nenhuma (Avulso)</option>
             <?php
@@ -49,7 +49,7 @@ $origem = empty($item['mesa_id']) ? 'avulso' : 'mesa';
                 echo "<option value='{$m['id']}' {$selected}>" . htmlspecialchars($m['identificacao']) . "</option>";
             }
             ?>
-        </select>
+        </select> -->
 
         <label>Patrimônio / Protocolo:</label>
         <input type="text" name="patrimonio" value="<?= htmlspecialchars($item['patrimonio_protocolo']) ?>" required>

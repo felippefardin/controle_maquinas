@@ -59,12 +59,17 @@ $busca = isset($_GET['busca']) ? trim($_GET['busca']) : '';
     <div class="col-12 mb-4">
         <div class="card mesa-card shadow-sm border-0 rounded-4">
             <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-4 border-0">
-                <h5 class="mb-0 fw-bold text-uppercase"><?= htmlspecialchars($mesa['identificacao']) ?></h5>
-                <div>
-                    <a href="historico_mesa.php?id=<?= $mesa['id'] ?>" class="btn btn-sm btn-outline-info rounded-pill me-2">🕒 Histórico</a>
-                    <a href="acoes.php?acao=deletar_mesa&id=<?= $mesa['id'] ?>" class="btn btn-sm btn-outline-danger rounded-pill" onclick="return confirm('Excluir mesa permanentemente?')">Excluir Mesa</a>
-                </div>
-            </div>
+    <form action="acoes.php?acao=editar_mesa" method="POST" class="d-flex gap-2 align-items-center">
+        <input type="hidden" name="id" value="<?= $mesa['id'] ?>">
+        <input type="text" name="identificacao" class="form-control form-control-sm border-0 fw-bold" 
+               value="<?= htmlspecialchars($mesa['identificacao']) ?>" required style="width: 200px;">
+        <button type="submit" class="btn btn-sm btn-outline-warning rounded-pill px-3">Salvar</button>
+    </form>
+    <div>
+        <a href="historico_mesa.php?id=<?= $mesa['id'] ?>" class="btn btn-sm btn-outline-info rounded-pill me-2">🕒 Histórico</a>
+        <a href="acoes.php?acao=deletar_mesa&id=<?= $mesa['id'] ?>" class="btn btn-sm btn-outline-danger rounded-pill" onclick="return confirm('Excluir mesa permanentemente?')">Excluir Mesa</a>
+    </div>
+</div>
             <div class="card-body px-4 pb-4 pt-0">
                 <div class="mb-3">
                     <a href="gerenciar_itens.php?mesa_id=<?= $mesa['id'] ?>" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm">+ Adicionar Equipamento</a>
