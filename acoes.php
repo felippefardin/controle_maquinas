@@ -212,4 +212,22 @@ if ($acao == 'salvar_ip_item') {
     header("Location: index.php");
     exit;
 }
+
+// Arquivar mesa (muda status para 'arquivado')
+if ($acao == 'arquivar_mesa') {
+    $stmt = $pdo->prepare("UPDATE mesas SET status = 'arquivado' WHERE id = ?");
+    $stmt->execute([$_GET['id']]);
+    registrarLog($pdo, $_GET['id'], "Mesa arquivada.");
+    header("Location: index.php");
+    exit;
+}
+
+// Reativar mesa (muda status para 'ativo')
+if ($acao == 'reativar_mesa') {
+    $stmt = $pdo->prepare("UPDATE mesas SET status = 'ativo' WHERE id = ?");
+    $stmt->execute([$_GET['id']]);
+    registrarLog($pdo, $_GET['id'], "Mesa reativada.");
+    header("Location: arquivo_mesas.php");
+    exit;
+}
 ?>

@@ -66,6 +66,7 @@ $busca = isset($_GET['busca']) ? trim($_GET['busca']) : '';
         <button type="submit" class="btn btn-sm btn-outline-warning rounded-pill px-3">Salvar</button>
     </form>
     <div>
+        <a href="acoes.php?acao=arquivar_mesa&id=<?= $mesa['id'] ?>" class="btn btn-sm btn-outline-secondary rounded-pill me-2" title="Arquivar Mesa" onclick="return confirm('Arquivar esta mesa?')">📁</a>
         <a href="historico_mesa.php?id=<?= $mesa['id'] ?>" class="btn btn-sm btn-outline-info rounded-pill me-2">🕒 Histórico</a>
         <a href="acoes.php?acao=deletar_mesa&id=<?= $mesa['id'] ?>" class="btn btn-sm btn-outline-danger rounded-pill" onclick="return confirm('Excluir mesa permanentemente?')">Excluir Mesa</a>
     </div>

@@ -32,6 +32,7 @@ $mesas_deletadas = $stmt->fetchAll();
                     <td><?= $mesa['id'] ?></td>
                     <td><?= htmlspecialchars($mesa['identificacao']) ?></td>
                     <td>
+                        <a href="acoes.php?acao=reativar_mesa&id=<?= $mesa['id'] ?>" class="btn btn-sm btn-success">Reativar</a>
                         <a href="historico_mesa.php?id=<?= $mesa['id'] ?>" class="btn btn-sm btn-info">Ver Histórico</a>
                     </td>
                 </tr>
