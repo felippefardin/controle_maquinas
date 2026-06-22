@@ -11,7 +11,8 @@ $busca = isset($_GET['busca']) ? trim($_GET['busca']) : '';
         <p class="text-muted">Gerenciamento de mesas de trabalho.</p>
     </div>
     <div class="col-md-6 text-md-end">
-        <a href="arquivo_mesas.php" class="btn btn-outline-secondary px-4 py-2 fw-bold shadow-sm">Arquivo</a>
+        <a href="tutorial.php" class="btn btn-outline-primary px-4 py-2 fw-bold shadow-sm">📖 Tutorial</a>
+        <a href="arquivo_mesas.php" class="btn btn-outline-secondary px-4 py-2 fw-bold shadow-sm">📁 Arquivo</a>
         <a href="itens_avulsos.php" class="btn btn-outline-info px-4 py-2 fw-bold shadow-sm">📦 Itens Avulsos</a>
     </div>
 </div>
