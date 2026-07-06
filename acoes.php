@@ -4,7 +4,7 @@ $acao = isset($_GET['acao']) ? $_GET['acao'] : '';
 
 // --- MESAS ---
 if ($acao == 'criar_mesa') {
-    $stmt = $pdo->prepare("INSERT INTO mesas (identificacao, ip_mesa) VALUES (?, ?)");
+    $stmt = $pdo->prepare("INSERT INTO mesas (identificacao, ip_mesa, status) VALUES (?, ?, 'ativo')");
     $stmt->execute([$_POST['identificacao'], $_POST['ip_mesa']]);
     
     $mesa_id = $pdo->lastInsertId();

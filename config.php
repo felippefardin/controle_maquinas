@@ -13,12 +13,18 @@ try {
     die("Erro ao conectar: " . $e->getMessage());
 }
 
+// function registrarLog($pdo, $mesa_id, $mensagem) {
+//     try {
+//         $stmt = $pdo->prepare("INSERT INTO historico_mesas (mesa_id, descricao_alteracao, data_alteracao) VALUES (?, ?, NOW())");
+//         $stmt->execute([$mesa_id, $mensagem]);
+//     } catch (PDOException $e) {
+//         // Se a tabela não existir, o log não falhará o site todo
+//     }
+// }
+
 function registrarLog($pdo, $mesa_id, $mensagem) {
-    try {
-        $stmt = $pdo->prepare("INSERT INTO historico_mesas (mesa_id, descricao_alteracao, data_alteracao) VALUES (?, ?, NOW())");
-        $stmt->execute([$mesa_id, $mensagem]);
-    } catch (PDOException $e) {
-        // Se a tabela não existir, o log não falhará o site todo
-    }
+    // Remova o try/catch temporariamente para ver se ocorre erro
+    $stmt = $pdo->prepare("INSERT INTO historico_mesas (mesa_id, descricao_alteracao, data_alteracao) VALUES (?, ?, NOW())");
+    $stmt->execute([$mesa_id, $mensagem]);
 }
 ?>
