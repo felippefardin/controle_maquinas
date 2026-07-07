@@ -30,7 +30,7 @@ $mesas_deletadas = $stmt->fetchAll();
                 <?php foreach ($mesas_deletadas as $mesa): ?>
                 <tr>
                     <td><?= $mesa['id'] ?></td>
-                    <td><?= htmlspecialchars($mesa['identificacao']) ?></td>
+                    <td><?= htmlspecialchars($mesa['nome']) ?></td>
                     <td>
                         <a href="acoes.php?acao=reativar_mesa&id=<?= $mesa['id'] ?>" class="btn btn-sm btn-success">Reativar</a>
                         <a href="historico_mesa.php?id=<?= $mesa['id'] ?>" class="btn btn-sm btn-info">Ver Histórico</a>

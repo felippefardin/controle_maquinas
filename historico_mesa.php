@@ -17,11 +17,11 @@ $logs = $stmtLog->fetchAll();
 <html lang="pt-br">
 <head>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <title>Histórico - <?php echo $mesa['identificacao']; ?></title>
+    <title>Histórico - <?php echo $mesa['nome']; ?></title>
 </head>
 <body class="p-4">
     <div class="container">
-        <h2>Histórico da Mesa: <?php echo htmlspecialchars($mesa['identificacao']); ?></h2>
+        <h2>Histórico da Mesa: <?php echo htmlspecialchars($mesa['nome']); ?></h2>
         <a href="index.php" class="btn btn-secondary mb-3">Voltar</a>
         
         <table class="table table-striped">
@@ -35,7 +35,7 @@ $logs = $stmtLog->fetchAll();
                 <?php foreach ($logs as $log): ?>
                 <tr>
                     <td><?php echo date('d/m/Y H:i', strtotime($log['data_alteracao'])); ?></td>
-                    <td><?php echo htmlspecialchars($log['descricao_alteracao']); ?></td>
+                    <td><?php echo htmlspecialchars($log['evento']); ?></td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>

@@ -16,7 +16,7 @@ if (!$mesa) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerenciar Mesa <?= htmlspecialchars($mesa['identificacao']) ?></title>
+    <title>Gerenciar Mesa <?= htmlspecialchars($mesa['nome']) ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
@@ -34,7 +34,7 @@ if (!$mesa) {
 
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-primary text-white py-3">
-                    <h5 class="mb-0">📍 Gerenciar Mesa: <?= htmlspecialchars($mesa['identificacao']) ?></h5>
+                    <h5 class="mb-0">📍 Gerenciar Mesa: <?= htmlspecialchars($mesa['nome']) ?></h5>
                 </div>
                 <!-- <div class="mb-3">
                     <label for="ip_maquina" class="form-label fw-bold">Endereço IP (Opcional)</label>
@@ -75,7 +75,7 @@ if (!$mesa) {
             </div>
 
             <div class="text-center mt-4 text-muted small">
-                O item será vinculado automaticamente à <strong><?= htmlspecialchars($mesa['identificacao']) ?></strong>.
+                O item será vinculado automaticamente à <strong><?= htmlspecialchars($mesa['nome']) ?></strong>.
             </div>
 
         </div>

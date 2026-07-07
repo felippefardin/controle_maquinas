@@ -21,10 +21,10 @@ try {
 //         // Se a tabela não existir, o log não falhará o site todo
 //     }
 // }
-
 function registrarLog($pdo, $mesa_id, $mensagem) {
-    // Remova o try/catch temporariamente para ver se ocorre erro
-    $stmt = $pdo->prepare("INSERT INTO historico_mesas (mesa_id, descricao_alteracao, data_alteracao) VALUES (?, ?, NOW())");
+    // Corrigido para os nomes das colunas que você criou: 'evento' e 'data'
+    // Nota: 'data' é preenchido pelo banco com CURRENT_TIMESTAMP, mas pode ser passado via SQL
+    $stmt = $pdo->prepare("INSERT INTO historico_mesas (mesa_id, evento, data_alteracao) VALUES (?, ?, NOW())");
     $stmt->execute([$mesa_id, $mensagem]);
 }
 ?>

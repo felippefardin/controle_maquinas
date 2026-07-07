@@ -62,7 +62,7 @@ $busca = isset($_GET['busca']) ? trim($_GET['busca']) : '';
     <form action="acoes.php?acao=editar_mesa" method="POST" class="d-flex gap-2 align-items-center">
         <input type="hidden" name="id" value="<?= $mesa['id'] ?>">
         <input type="text" name="identificacao" class="form-control form-control-sm border-0 fw-bold" 
-               value="<?= htmlspecialchars($mesa['identificacao']) ?>" required style="width: 200px;">
+               value="<?= htmlspecialchars($mesa['nome']) ?>" required style="width: 200px;">
         <button type="submit" class="btn btn-sm btn-outline-warning rounded-pill px-3">Salvar</button>
     </form>
     <div>

@@ -4,7 +4,7 @@ include 'header.php';
 
 $item_id = $_GET['item_id'];
 
-$stmt = $pdo->prepare("SELECT i.*, m.identificacao as mesa_nome FROM itens i JOIN mesas m ON i.mesa_id = m.id WHERE i.id = ?");
+$stmt = $pdo->prepare("SELECT i.*, m.nome as mesa_nome FROM itens i LEFT JOIN mesas m ON i.mesa_id = m.id WHERE i.id = ?");
 $stmt->execute([$item_id]);
 $item = $stmt->fetch();
 
@@ -29,7 +29,9 @@ $manutencao = $stmt_m->fetch();
                     </div>
                     <div class="text-end">
                         <small class="text-muted d-block">Local de Origem</small>
-                        <span class="fw-semibold"><?= htmlspecialchars($item['mesa_nome']) ?></span>
+                        <span class="fw-semibold">
+    <?= !empty($item['mesa_nome']) ? htmlspecialchars($item['mesa_nome']) : 'Avulso' ?>
+</span>
                     </div>
                 </div>
 

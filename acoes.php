@@ -2,13 +2,20 @@
 include 'config.php';
 $acao = isset($_GET['acao']) ? $_GET['acao'] : '';
 
-// --- MESAS ---
+// --- CORREÇÃO NA CRIAÇÃO DE MESA ---
 if ($acao == 'criar_mesa') {
-    $stmt = $pdo->prepare("INSERT INTO mesas (identificacao, ip_mesa, status) VALUES (?, ?, 'ativo')");
-    $stmt->execute([$_POST['identificacao'], $_POST['ip_mesa']]);
+    // Altere para aceitar 'identificacao' conforme está chegando no POST
+    $nome = $_POST['identificacao']; 
+    
+    // Como o IP não está chegando, você precisará adicioná-lo ao formulário
+    // ou definir um valor padrão temporário para evitar erro
+    $ip_mesa = isset($_POST['ip_mesa']) ? $_POST['ip_mesa'] : '0.0.0.0';
+
+    $stmt = $pdo->prepare("INSERT INTO mesas (nome, ip_mesa, status) VALUES (?, ?, 'ativo')");
+    $stmt->execute([$nome, $ip_mesa]);
     
     $mesa_id = $pdo->lastInsertId();
-    registrarLog($pdo, $mesa_id, "Mesa criada: {$_POST['identificacao']} com IP: {$_POST['ip_mesa']}");
+    registrarLog($pdo, $mesa_id, "Mesa criada: {$nome} com IP: {$ip_mesa}");
     
     header("Location: index.php");
     exit;
@@ -16,15 +23,18 @@ if ($acao == 'criar_mesa') {
 
 // --- MESAS ---
 if ($acao == 'editar_mesa') {
-    $stmtOld = $pdo->prepare("SELECT identificacao FROM mesas WHERE id = ?");
+    // Busca o nome antigo para gerar o log
+    $stmtOld = $pdo->prepare("SELECT nome FROM mesas WHERE id = ?");
     $stmtOld->execute([$_POST['id']]);
     $old = $stmtOld->fetch();
 
-    $stmt = $pdo->prepare("UPDATE mesas SET identificacao = ? WHERE id = ?");
-    $stmt->execute([$_POST['identificacao'], $_POST['id']]);
+    // Atualiza com o novo nome
+    $stmt = $pdo->prepare("UPDATE mesas SET nome = ? WHERE id = ?");
+    $stmt->execute([$_POST['nome'], $_POST['id']]);
 
-    if ($old['identificacao'] != $_POST['identificacao']) {
-        registrarLog($pdo, $_POST['id'], "Nome da mesa alterado: '{$old['identificacao']}' -> '{$_POST['identificacao']}'");
+    // Verifica e registra log se o nome mudou
+    if ($old['nome'] != $_POST['nome']) {
+        registrarLog($pdo, $_POST['id'], "Nome da mesa alterado: '{$old['nome']}' -> '{$_POST['nome']}'");
     }
     header("Location: index.php");
     exit;

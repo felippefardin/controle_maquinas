@@ -39,17 +39,19 @@ $origem = empty($item['mesa_id']) ? 'avulso' : 'mesa';
             <input type="text" name="nome_personalizado" value="<?= htmlspecialchars($item['nome_personalizado'] ?? '') ?>">
         </div>
 
-        <!-- <label>Vincular à Mesa:</label>
-        <select name="mesa_id">
-            <option value="">Nenhuma (Avulso)</option>
-            <?php
-            $mesas = $pdo->query("SELECT id, identificacao FROM mesas WHERE status = 'ativo'")->fetchAll();
-            foreach($mesas as $m) {
-                $selected = ($item['mesa_id'] == $m['id']) ? 'selected' : '';
-                echo "<option value='{$m['id']}' {$selected}>" . htmlspecialchars($m['identificacao']) . "</option>";
-            }
-            ?>
-        </select> -->
+       <label>Vincular à Mesa:</label>
+<select name="mesa_id">
+    <option value="">Nenhuma (Avulso)</option>
+    <?php
+    // Corrigido para buscar pela coluna 'nome' conforme a estrutura atual
+    $mesas = $pdo->query("SELECT id, nome FROM mesas WHERE status = 'ativo'")->fetchAll();
+    foreach($mesas as $m) {
+        $selected = ($item['mesa_id'] == $m['id']) ? 'selected' : '';
+        // Exibindo 'nome' em vez de 'identificacao'
+        echo "<option value='{$m['id']}' {$selected}>" . htmlspecialchars($m['nome']) . "</option>";
+    }
+    ?>
+</select>
 
         <label>Patrimônio / Protocolo:</label>
         <input type="text" name="patrimonio" value="<?= htmlspecialchars($item['patrimonio_protocolo']) ?>" required>
