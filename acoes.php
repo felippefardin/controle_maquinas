@@ -4,11 +4,8 @@ $acao = isset($_GET['acao']) ? $_GET['acao'] : '';
 
 // --- CORREÇÃO NA CRIAÇÃO DE MESA ---
 if ($acao == 'criar_mesa') {
-    // Altere para aceitar 'identificacao' conforme está chegando no POST
     $nome = $_POST['identificacao']; 
     
-    // Como o IP não está chegando, você precisará adicioná-lo ao formulário
-    // ou definir um valor padrão temporário para evitar erro
     $ip_mesa = isset($_POST['ip_mesa']) ? $_POST['ip_mesa'] : '0.0.0.0';
 
     $stmt = $pdo->prepare("INSERT INTO mesas (nome, ip_mesa, status) VALUES (?, ?, 'ativo')");
@@ -22,20 +19,17 @@ if ($acao == 'criar_mesa') {
 }
 
 // --- MESAS ---
-if ($acao == 'editar_mesa') {
-    // Busca o nome antigo para gerar o log
-    $stmtOld = $pdo->prepare("SELECT nome FROM mesas WHERE id = ?");
-    $stmtOld->execute([$_POST['id']]);
-    $old = $stmtOld->fetch();
+if ($_GET['acao'] == 'editar_mesa') {
+    $id = $_POST['id'];
+    $novo_nome = $_POST['nome']; 
 
-    // Atualiza com o novo nome
+    // 1. Atualiza o nome da mesa no banco
     $stmt = $pdo->prepare("UPDATE mesas SET nome = ? WHERE id = ?");
-    $stmt->execute([$_POST['nome'], $_POST['id']]);
+    $stmt->execute([$novo_nome, $id]);
 
-    // Verifica e registra log se o nome mudou
-    if ($old['nome'] != $_POST['nome']) {
-        registrarLog($pdo, $_POST['id'], "Nome da mesa alterado: '{$old['nome']}' -> '{$_POST['nome']}'");
-    }
+    // 2. Registra a alteração no histórico usando a função correta do sistema
+    registrarLog($pdo, $id, "Nome da mesa alterado para: " . $novo_nome);
+
     header("Location: index.php");
     exit;
 }
@@ -54,7 +48,6 @@ if ($acao == 'deletar_mesa') {
 if ($acao == 'adicionar_item') {
     $mesa_id = (!empty($_POST['mesa_id']) && $_POST['mesa_id'] != '0') ? $_POST['mesa_id'] : null;
     
-    // Ajustado para incluir o ip_maquina
     $stmt = $pdo->prepare("INSERT INTO itens (mesa_id, tipo, nome_personalizado, patrimonio_protocolo, ip_maquina) VALUES (?, ?, ?, ?, ?)");
     $stmt->execute([
         $mesa_id, 
@@ -81,25 +74,21 @@ if ($acao == 'editar_item') {
 
     $mudancas = [];
     
-    // Verifica mudança de patrimônio
     if ($itemAntigo['patrimonio_protocolo'] != $_POST['patrimonio']) {
         $mudancas[] = "Patrimônio: {$itemAntigo['patrimonio_protocolo']} -> {$_POST['patrimonio']}";
     }
     
-    // Verifica mudança de IP
     if ($itemAntigo['ip_maquina'] != $_POST['ip_maquina']) {
         $mudancas[] = "IP: {$itemAntigo['ip_maquina']} -> {$_POST['ip_maquina']}";
     }
 
-    // Verifica mudança de Mesa
     if ($itemAntigo['mesa_id'] != $_POST['mesa_id']) {
-        // Busca nomes das mesas para o log ficar legível
         $oldMesaName = "Avulso";
         if ($itemAntigo['mesa_id']) {
             $stmtM = $pdo->prepare("SELECT identificacao FROM mesas WHERE id = ?");
             $stmtM->execute([$itemAntigo['mesa_id']]);
             $m = $stmtM->fetch();
-            $oldMesaName = $m['identificacao'];
+            $oldMesaName = $m['identificacao'] ?? $m['nome'] ?? 'Mesa';
         }
         
         $newMesaName = "Avulso";
@@ -107,13 +96,12 @@ if ($acao == 'editar_item') {
             $stmtM = $pdo->prepare("SELECT identificacao FROM mesas WHERE id = ?");
             $stmtM->execute([$_POST['mesa_id']]);
             $m = $stmtM->fetch();
-            $newMesaName = $m['identificacao'];
+            $newMesaName = $m['identificacao'] ?? $m['nome'] ?? 'Mesa';
         }
         
         $mudancas[] = "Mesa: {$oldMesaName} -> {$newMesaName}";
     }
 
-    // Executa a atualização no banco incluindo mesa_id
     $stmt = $pdo->prepare("UPDATE itens SET mesa_id = ?, tipo = ?, nome_personalizado = ?, patrimonio_protocolo = ?, ip_maquina = ? WHERE id = ?");
     $stmt->execute([
         !empty($_POST['mesa_id']) ? $_POST['mesa_id'] : null, 
@@ -124,10 +112,8 @@ if ($acao == 'editar_item') {
         $_POST['id']
     ]);
 
-    // Registra o log no histórico da mesa nova (ou da antiga se for remoção)
     if (!empty($mudancas)) {
         $msg = "Item {$itemAntigo['tipo']} ({$itemAntigo['patrimonio_protocolo']}) alterado: " . implode(", ", $mudancas);
-        // Registra no histórico da mesa que recebeu a alteração
         registrarLog($pdo, !empty($_POST['mesa_id']) ? $_POST['mesa_id'] : $itemAntigo['mesa_id'], $msg);
     }
 

@@ -30,6 +30,7 @@ $busca = isset($_GET['busca']) ? trim($_GET['busca']) : '';
 
 <div class="card mb-5 shadow-sm border-0 bg-white rounded-4 overflow-hidden">
     <div class="card-body p-4">
+        <!-- Mantido 'identificacao' aqui caso o seu acoes.php espere isso ao criar, ou ajuste no acoes.php se necessário -->
         <form action="acoes.php?acao=criar_mesa" method="POST" class="row g-3 align-items-center">
             <div class="col-sm-4">
                 <input type="text" name="identificacao" class="form-control rounded-pill" placeholder="Nome da Mesa (ex: Mesa 10)" required>
@@ -44,8 +45,9 @@ $busca = isset($_GET['busca']) ? trim($_GET['busca']) : '';
 <div class="row">
     <?php
     if ($busca) {
+        // Corrigido de m.identificacao para m.nome
         $sql = "SELECT DISTINCT m.* FROM mesas m LEFT JOIN itens i ON m.id = i.mesa_id 
-                WHERE m.status = 'ativo' AND (m.identificacao LIKE :q OR i.nome_personalizado LIKE :q OR i.patrimonio_protocolo LIKE :q) 
+                WHERE m.status = 'ativo' AND (m.nome LIKE :q OR i.nome_personalizado LIKE :q OR i.patrimonio_protocolo LIKE :q) 
                 ORDER BY m.id DESC";
         $stmt = $pdo->prepare($sql);
         $stmt->execute(['q' => "%$busca%"]);
@@ -61,8 +63,9 @@ $busca = isset($_GET['busca']) ? trim($_GET['busca']) : '';
             <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-4 border-0">
     <form action="acoes.php?acao=editar_mesa" method="POST" class="d-flex gap-2 align-items-center">
         <input type="hidden" name="id" value="<?= $mesa['id'] ?>">
-        <input type="text" name="identificacao" class="form-control form-control-sm border-0 fw-bold" 
-               value="<?= htmlspecialchars($mesa['nome']) ?>" required style="width: 200px;">
+        <!-- Alterado name para 'nome' e value para $mesa['nome'] -->
+        <input type="text" name="nome" class="form-control form-control-sm border-0 fw-bold" 
+               value="<?= htmlspecialchars($mesa['nome'] ?? '') ?>" required style="width: 200px;">
         <button type="submit" class="btn btn-sm btn-outline-warning rounded-pill px-3">Salvar</button>
     </form>
     <div>
