@@ -3,14 +3,23 @@ include 'config.php';
 include 'header.php'; 
 
 $busca = isset($_GET['busca']) ? trim($_GET['busca']) : '';
+
+// Consulta para contar quantas máquinas/itens estão em manutenção
+$stmt_manutencao = $pdo->query("SELECT COUNT(*) FROM itens WHERE status = 'Manutenção'");
+$total_manutencao = $stmt_manutencao->fetchColumn();
 ?>
 
 <div class="row mb-5 align-items-center">   
-    <div class="col-md-6">
+    <div class="col-md-5">
         <h1 class="fw-bolder text-dark display-6">Controle de Máquinas </h1>
         <p class="text-muted">Gerenciamento de mesas de trabalho.</p>
     </div>
-    <div class="col-md-6 text-md-end">
+    <div class="col-md-7 text-md-end">
+        <!-- Ícone adicionado aqui para garantir visibilidade ao lado dos botões do topo -->
+        <a href="maquinas_manutencao.php" class="btn btn-outline-danger px-3 py-2 fw-bold shadow-sm me-2" title="Máquinas em Manutenção">
+            <i class="fas fa-tools"></i> 
+            <span class="badge bg-danger ms-1"><?php echo $total_manutencao; ?></span>
+        </a>
         <a href="tutorial.php" class="btn btn-outline-primary px-4 py-2 fw-bold shadow-sm">📖 Tutorial</a>
         <a href="arquivo_mesas.php" class="btn btn-outline-secondary px-4 py-2 fw-bold shadow-sm">📁 Arquivo</a>
         <a href="itens_avulsos.php" class="btn btn-outline-info px-4 py-2 fw-bold shadow-sm">📦 Itens Avulsos</a>
