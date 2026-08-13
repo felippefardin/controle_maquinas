@@ -7,6 +7,12 @@ $busca = isset($_GET['busca']) ? trim($_GET['busca']) : '';
 // Consulta para contar quantas máquinas/itens estão em manutenção
 $stmt_manutencao = $pdo->query("SELECT COUNT(*) FROM itens WHERE status = 'Manutenção'");
 $total_manutencao = $stmt_manutencao->fetchColumn();
+$resumo = $pdo->query("
+    SELECT
+        (SELECT COUNT(*) FROM mesas WHERE status = 'ativo') AS mesas_ativas,
+        (SELECT COUNT(*) FROM itens) AS equipamentos,
+        (SELECT COUNT(*) FROM itens WHERE mesa_id IS NULL) AS itens_avulsos
+")->fetch();
 ?>
 
 <div class="row mb-5 align-items-center">   
@@ -24,6 +30,12 @@ $total_manutencao = $stmt_manutencao->fetchColumn();
         <a href="arquivo_mesas.php" class="btn btn-outline-secondary px-4 py-2 fw-bold shadow-sm">📁 Arquivo</a>
         <a href="itens_avulsos.php" class="btn btn-outline-info px-4 py-2 fw-bold shadow-sm">📦 Itens Avulsos</a>
     </div>
+</div>
+<div class="row g-3 mb-4" aria-label="Resumo do inventário">
+    <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="text-muted small">Mesas ativas</div><div class="fs-2 fw-bold"><?= (int) $resumo['mesas_ativas'] ?></div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="text-muted small">Equipamentos</div><div class="fs-2 fw-bold"><?= (int) $resumo['equipamentos'] ?></div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="text-muted small">Itens avulsos</div><div class="fs-2 fw-bold text-info"><?= (int) $resumo['itens_avulsos'] ?></div></div></div></div>
+    <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm rounded-4 h-100"><div class="card-body"><div class="text-muted small">Em manutenção</div><div class="fs-2 fw-bold text-danger"><?= (int) $total_manutencao ?></div></div></div></div>
 </div>
 <div class="row mb-5">
     <div class="col-md-12">
@@ -56,10 +68,15 @@ $total_manutencao = $stmt_manutencao->fetchColumn();
     if ($busca) {
         // Corrigido de m.identificacao para m.nome
         $sql = "SELECT DISTINCT m.* FROM mesas m LEFT JOIN itens i ON m.id = i.mesa_id 
-                WHERE m.status = 'ativo' AND (m.nome LIKE :q OR i.nome_personalizado LIKE :q OR i.patrimonio_protocolo LIKE :q) 
+                WHERE m.status = 'ativo' AND (m.nome LIKE :q_nome OR i.nome_personalizado LIKE :q_item OR i.patrimonio_protocolo LIKE :q_patrimonio) 
                 ORDER BY m.id DESC";
         $stmt = $pdo->prepare($sql);
-        $stmt->execute(['q' => "%$busca%"]);
+        $termoBusca = "%{$busca}%";
+        $stmt->execute([
+            'q_nome' => $termoBusca,
+            'q_item' => $termoBusca,
+            'q_patrimonio' => $termoBusca,
+        ]);
     } else {
         $stmt = $pdo->query("SELECT * FROM mesas WHERE status = 'ativo' ORDER BY id DESC");
     }
@@ -78,9 +95,15 @@ $total_manutencao = $stmt_manutencao->fetchColumn();
         <button type="submit" class="btn btn-sm btn-outline-warning rounded-pill px-3">Salvar</button>
     </form>
     <div>
-        <a href="acoes.php?acao=arquivar_mesa&id=<?= $mesa['id'] ?>" class="btn btn-sm btn-outline-secondary rounded-pill me-2" title="Arquivar Mesa" onclick="return confirm('Arquivar esta mesa?')">📁</a>
+        <form action="acoes.php?acao=arquivar_mesa" method="POST" class="d-inline" onsubmit="return confirm('Arquivar esta mesa?')">
+            <input type="hidden" name="id" value="<?= (int) $mesa['id'] ?>">
+            <button class="btn btn-sm btn-outline-secondary rounded-pill me-2" title="Arquivar Mesa">📁</button>
+        </form>
         <a href="historico_mesa.php?id=<?= $mesa['id'] ?>" class="btn btn-sm btn-outline-info rounded-pill me-2">🕒 Histórico</a>
-        <a href="acoes.php?acao=deletar_mesa&id=<?= $mesa['id'] ?>" class="btn btn-sm btn-outline-danger rounded-pill" onclick="return confirm('Excluir mesa permanentemente?')">Excluir Mesa</a>
+        <form action="acoes.php?acao=deletar_mesa" method="POST" class="d-inline" onsubmit="return confirm('Excluir mesa permanentemente?')">
+            <input type="hidden" name="id" value="<?= (int) $mesa['id'] ?>">
+            <button class="btn btn-sm btn-outline-danger rounded-pill">Excluir Mesa</button>
+        </form>
     </div>
 </div>
             <div class="card-body px-4 pb-4 pt-0">
@@ -90,7 +113,19 @@ $total_manutencao = $stmt_manutencao->fetchColumn();
                 
                 <div class="list-group list-group-flush border rounded-4 overflow-hidden shadow-none">
                     <?php
-                    $stmt_i = $pdo->prepare("SELECT * FROM itens WHERE mesa_id = ?");
+                    $stmt_i = $pdo->prepare("
+                        SELECT i.*,
+                               EXISTS(
+                                   SELECT 1 FROM manutencoes mt
+                                   WHERE mt.substituto_item_id = i.id
+                                     AND mt.status_manutencao = 'Aberto'
+                               ) AS equipamento_substituto
+                        FROM itens i
+                        WHERE i.mesa_id = ?
+                        ORDER BY equipamento_substituto DESC,
+                                 CASE WHEN i.status = 'Manutenção' THEN 1 ELSE 0 END,
+                                 i.id
+                    ");
                     $stmt_i->execute([$mesa['id']]);
                     $itens = $stmt_i->fetchAll();
                     
@@ -99,11 +134,31 @@ $total_manutencao = $stmt_manutencao->fetchColumn();
                     foreach ($itens as $item):
                         $em_manutencao = ($item['status'] == 'Manutenção');
                     ?>
+                        <?php if ($em_manutencao): ?>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-3 px-4 border-bottom bg-light">
+                            <div class="d-flex align-items-center gap-2">
+                                <a href="manutencao.php?item_id=<?= $item['id'] ?>"
+                                   class="btn btn-sm btn-danger rounded-pill px-3 fw-bold"
+                                   title="Abrir manutenção">
+                                    🛠 Em manutenção
+                                </a>
+                                <span class="text-muted small">
+                                    <?= htmlspecialchars($item['tipo'] == 'Outros' ? $item['nome_personalizado'] : $item['tipo']) ?>
+                                    — <?= htmlspecialchars($item['patrimonio_protocolo']) ?>
+                                </span>
+                            </div>
+                            <a href="manutencao.php?item_id=<?= $item['id'] ?>"
+                               class="btn btn-sm btn-outline-danger rounded-pill px-3">Ver detalhes</a>
+                        </div>
+                        <?php else: ?>
                         <div class="list-group-item d-flex justify-content-between align-items-center py-3 px-4 border-bottom">
                             <div>
-                                <span class="badge <?= $em_manutencao ? 'bg-danger' : 'bg-dark' ?> me-2 rounded-pill">
-                                    <?= $item['tipo'] ?>
+                                <span class="badge bg-dark me-2 rounded-pill">
+                                    <?= e($item['tipo']) ?>
                                 </span>
+                                <?php if (!empty($item['equipamento_substituto'])): ?>
+                                    <span class="badge bg-success me-2 rounded-pill">Equipamento atual</span>
+                                <?php endif; ?>
                                 <strong><?= $item['tipo'] == 'Outros' ? htmlspecialchars($item['nome_personalizado']) : $item['tipo'] ?></strong>
                                 <span class="text-muted ms-2 small font-monospace">
                                     <?= htmlspecialchars($item['patrimonio_protocolo']) ?>
@@ -118,11 +173,15 @@ $total_manutencao = $stmt_manutencao->fetchColumn();
                                     <a href="rdp://<?= htmlspecialchars($item['ip_maquina']) ?>" class="btn btn-sm btn-outline-primary rounded-pill px-3 me-1" title="Acessar via RDP">🖥️</a>
                                 <?php endif; ?>
                                 
-                                <a href="manutencao.php?item_id=<?= $item['id'] ?>" class="btn btn-sm <?= $em_manutencao ? 'btn-danger' : 'btn-outline-dark' ?> rounded-pill px-3 me-1">🛠️</a>
+                                <a href="manutencao.php?item_id=<?= $item['id'] ?>" class="btn btn-sm btn-outline-dark rounded-pill px-3 me-1">🛠️</a>
                                 <a href="editar_item.php?id=<?= $item['id'] ?>" class="btn btn-sm btn-link text-decoration-none text-muted">Editar</a>
-                                <a href="acoes.php?acao=remover_item&id=<?= $item['id'] ?>" class="btn btn-sm btn-link text-danger text-decoration-none" onclick="return confirm('Remover item?')">Remover</a>
+                                <form action="acoes.php?acao=remover_item" method="POST" class="d-inline" onsubmit="return confirm('Remover item?')">
+                                    <input type="hidden" name="id" value="<?= (int) $item['id'] ?>">
+                                    <button class="btn btn-sm btn-link text-danger text-decoration-none">Remover</button>
+                                </form>
                             </div>
                         </div>
+                        <?php endif; ?>
                     <?php endforeach; ?>
                 </div>
             </div>

@@ -47,7 +47,11 @@ try {
                                     <td class="px-4"><?= htmlspecialchars($item['nome_mesa'] ?? 'Sem Mesa') ?></td>
                                     <td class="px-4 font-monospace"><?= !empty($item['ip_maquina']) ? htmlspecialchars($item['ip_maquina']) : '-' ?></td>
                                     <td class="px-4 text-center">
-                                        <span class="badge bg-danger rounded-pill px-3 py-2">Em Manutenção</span>
+                                        <a href="manutencao.php?item_id=<?= (int) $item['id'] ?>"
+                                           class="badge bg-danger rounded-pill px-3 py-2 text-decoration-none"
+                                           title="Abrir histórico de manutenção deste equipamento">
+                                            Em Manutenção
+                                        </a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

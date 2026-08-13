@@ -1,10 +1,10 @@
-<?php 
-include 'config.php'; 
-include 'header.php'; 
+<?php
+include 'config.php';
+include 'header.php';
 
-// Busca apenas as mesas que estão com status 'deletado'
-$stmt = $pdo->query("SELECT * FROM mesas WHERE status = 'deletado' ORDER BY id DESC");
-$mesas_deletadas = $stmt->fetchAll();
+// Exibe as mesas arquivadas e mantém compatibilidade com remoções antigas.
+$stmt = $pdo->query("SELECT * FROM mesas WHERE status IN ('arquivado', 'deletado') ORDER BY id DESC");
+$mesas_arquivadas = $stmt->fetchAll();
 ?>
 
 <div class="container mt-4">
@@ -24,16 +24,19 @@ $mesas_deletadas = $stmt->fetchAll();
             </tr>
         </thead>
         <tbody id="tabelaMesas">
-            <?php if(empty($mesas_deletadas)): ?>
+            <?php if (empty($mesas_arquivadas)): ?>
                 <tr><td colspan="3" class="text-center">Nenhuma mesa arquivada encontrada.</td></tr>
             <?php else: ?>
-                <?php foreach ($mesas_deletadas as $mesa): ?>
+                <?php foreach ($mesas_arquivadas as $mesa): ?>
                 <tr>
-                    <td><?= $mesa['id'] ?></td>
-                    <td><?= htmlspecialchars($mesa['nome']) ?></td>
+                    <td><?= (int) $mesa['id'] ?></td>
+                    <td><?= htmlspecialchars($mesa['nome'], ENT_QUOTES, 'UTF-8') ?></td>
                     <td>
-                        <a href="acoes.php?acao=reativar_mesa&id=<?= $mesa['id'] ?>" class="btn btn-sm btn-success">Reativar</a>
-                        <a href="historico_mesa.php?id=<?= $mesa['id'] ?>" class="btn btn-sm btn-info">Ver Histórico</a>
+                        <form action="acoes.php?acao=reativar_mesa" method="POST" class="d-inline">
+                            <input type="hidden" name="id" value="<?= (int) $mesa['id'] ?>">
+                            <button class="btn btn-sm btn-success">Reativar</button>
+                        </form>
+                        <a href="historico_mesa.php?id=<?= (int) $mesa['id'] ?>" class="btn btn-sm btn-info">Ver Histórico</a>
                     </td>
                 </tr>
                 <?php endforeach; ?>
@@ -44,25 +47,20 @@ $mesas_deletadas = $stmt->fetchAll();
 
 <script>
 function filtrarArquivos() {
-    let input = document.getElementById('campoBusca');
-    let filtro = input.value.toUpperCase();
-    let tabela = document.getElementById("tabelaMesas");
-    let linhas = tabela.getElementsByTagName("tr");
+    const input = document.getElementById('campoBusca');
+    const filtro = input.value.toUpperCase();
+    const tabela = document.getElementById('tabelaMesas');
+    const linhas = tabela.getElementsByTagName('tr');
 
     for (let i = 0; i < linhas.length; i++) {
-        let colID = linhas[i].getElementsByTagName("td")[0]; // Coluna ID
-        let colNome = linhas[i].getElementsByTagName("td")[1]; // Coluna Nome
+        const colID = linhas[i].getElementsByTagName('td')[0];
+        const colNome = linhas[i].getElementsByTagName('td')[1];
 
         if (colID && colNome) {
-            let textoID = colID.textContent || colID.innerText;
-            let textoNome = colNome.textContent || colNome.innerText;
-            
-            // Verifica se o filtro aparece no ID ou no Nome
-            if (textoID.toUpperCase().indexOf(filtro) > -1 || textoNome.toUpperCase().indexOf(filtro) > -1) {
-                linhas[i].style.display = "";
-            } else {
-                linhas[i].style.display = "none";
-            }
+            const textoID = colID.textContent || colID.innerText;
+            const textoNome = colNome.textContent || colNome.innerText;
+            linhas[i].style.display = textoID.toUpperCase().includes(filtro)
+                || textoNome.toUpperCase().includes(filtro) ? '' : 'none';
         }
     }
 }

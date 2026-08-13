@@ -71,28 +71,61 @@
                         <tr>
                             <th class="ps-4">Tipo</th>
                             <th>Patrimônio</th>
+                            <th>Situação</th>
                             <th class="text-end pe-4">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php
                         $busca = $_GET['busca'] ?? '';
+                        $sql_base = "
+                            SELECT i.*, mt.id AS manutencao_ativa_id, m.nome AS mesa_em_uso
+                            FROM itens i
+                            LEFT JOIN manutencoes mt
+                                ON mt.substituto_item_id = i.id
+                               AND mt.status_manutencao = 'Aberto'
+                            LEFT JOIN mesas m ON m.id = mt.mesa_id
+                            WHERE (i.mesa_id IS NULL OR mt.id IS NOT NULL)
+                        ";
                         if ($busca) {
-                            $stmt = $pdo->prepare("SELECT * FROM itens WHERE mesa_id IS NULL AND (patrimonio_protocolo LIKE ? OR nome_personalizado LIKE ?)");
-                            $stmt->execute(["%$busca%", "%$busca%"]);
+                            $stmt = $pdo->prepare(
+                                $sql_base .
+                                " AND (i.patrimonio_protocolo LIKE ? OR i.nome_personalizado LIKE ? OR i.tipo LIKE ? OR m.nome LIKE ?)
+                                  ORDER BY (mt.id IS NOT NULL) DESC, i.id DESC"
+                            );
+                            $stmt->execute(["%$busca%", "%$busca%", "%$busca%", "%$busca%"]);
                         } else {
-                            $stmt = $pdo->query("SELECT * FROM itens WHERE mesa_id IS NULL");
+                            $stmt = $pdo->query($sql_base . " ORDER BY (mt.id IS NOT NULL) DESC, i.id DESC");
                         }
                         
                         while ($item = $stmt->fetch()): ?>
                         <tr>
                             <td class="ps-4 fw-semibold text-secondary">
-                                <?= $item['tipo'] == 'Outros' ? htmlspecialchars($item['nome_personalizado']) : $item['tipo'] ?>
+                                <?= e($item['tipo'] == 'Outros' ? $item['nome_personalizado'] : $item['tipo']) ?>
                             </td>
                             <td><span class="badge bg-light text-dark border"><?= htmlspecialchars($item['patrimonio_protocolo']) ?></span></td>
+                            <td>
+                                <?php if (!empty($item['manutencao_ativa_id'])): ?>
+                                    <span class="badge bg-warning text-dark">
+                                        Em uso na mesa <?= htmlspecialchars($item['mesa_em_uso'] ?? 'não identificada') ?>
+                                    </span>
+                                <?php else: ?>
+                                    <span class="badge bg-success">Disponível</span>
+                                <?php endif; ?>
+                            </td>
                             <td class="text-end pe-4">
-                                <a href="editar_item.php?id=<?= $item['id'] ?>" class="btn btn-sm btn-outline-warning btn-rounded">Editar</a>
-                                <a href="acoes.php?acao=remover_item&id=<?= $item['id'] ?>" class="btn btn-sm btn-outline-danger btn-rounded" onclick="return confirm('Confirmar exclusão?')">Excluir</a>
+                                <?php if (!empty($item['manutencao_ativa_id'])): ?>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary btn-rounded" disabled
+                                            title="O equipamento está em uso temporário">
+                                        Em uso
+                                    </button>
+                                <?php else: ?>
+                                    <a href="editar_item.php?id=<?= $item['id'] ?>" class="btn btn-sm btn-outline-warning btn-rounded">Editar</a>
+                                    <form action="acoes.php?acao=remover_item" method="POST" class="d-inline" onsubmit="return confirm('Confirmar exclusão?')">
+                                        <input type="hidden" name="id" value="<?= (int) $item['id'] ?>">
+                                        <button class="btn btn-sm btn-outline-danger btn-rounded">Excluir</button>
+                                    </form>
+                                <?php endif; ?>
                             </td>
                         </tr>
                         <?php endwhile; ?>
