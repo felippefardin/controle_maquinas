@@ -59,13 +59,100 @@ function exigirPostComCsrf(): void {
     }
 }
 
+function destinoSeguro(mixed $valor): string {
+    $destino = trim((string) $valor);
+    if ($destino === '' || str_contains($destino, '://') || str_starts_with($destino, '//')) {
+        return 'index.php';
+    }
+    $partes = parse_url($destino);
+    $arquivo = basename((string) ($partes['path'] ?? ''));
+    if ($arquivo === '' || !preg_match('/^[a-zA-Z0-9_-]+\.php$/', $arquivo)) {
+        return 'index.php';
+    }
+    $caminho = realpath(__DIR__ . DIRECTORY_SEPARATOR . $arquivo);
+    if ($caminho === false || dirname($caminho) !== __DIR__ || in_array($arquivo, ['login.php', 'logout.php', 'recuperar_senha.php'], true)) {
+        return 'index.php';
+    }
+    $query = isset($partes['query']) && $partes['query'] !== '' ? '?' . $partes['query'] : '';
+    return $arquivo . $query;
+}
+
+function enviarEmailSistema(string $destinatario, string $assunto, string $mensagem): void {
+    global $envValue;
+    $host = $envValue('SMTP_HOST');
+    $porta = (int) $envValue('SMTP_PORT', '587');
+    $usuario = $envValue('SMTP_USER');
+    $senha = $envValue('SMTP_PASSWORD');
+    $remetente = $envValue('SMTP_FROM', $usuario);
+    if (!$host || !$porta || !$usuario || !$senha || !$remetente) {
+        throw new RuntimeException('O envio de e-mail não está configurado.');
+    }
+    $destinoEntrega = $destinatario;
+    if (strcasecmp($destinatario, $usuario) === 0 && str_ends_with(strtolower($destinatario), '@gmail.com')) {
+        [$nome, $dominio] = explode('@', $destinatario, 2);
+        $destinoEntrega = $nome . '+controlemaquinas@' . $dominio;
+    }
+    $socket = stream_socket_client("tcp://{$host}:{$porta}", $erroNumero, $erroTexto, 20);
+    if (!$socket) throw new RuntimeException('Não foi possível conectar ao servidor de e-mail.');
+    stream_set_timeout($socket, 20);
+    $ler = static function () use ($socket): string {
+        $resposta = '';
+        do {
+            $linha = fgets($socket, 515);
+            if ($linha === false) break;
+            $resposta .= $linha;
+        } while (isset($linha[3]) && $linha[3] === '-');
+        return $resposta;
+    };
+    $comando = static function (string $texto, array $codigos) use ($socket, $ler): string {
+        if ($texto !== '') fwrite($socket, $texto . "\r\n");
+        $resposta = $ler();
+        if (!in_array((int) substr($resposta, 0, 3), $codigos, true)) {
+            throw new RuntimeException('O servidor de e-mail recusou a solicitação.');
+        }
+        return $resposta;
+    };
+    try {
+        $comando('', [220]);
+        $comando('EHLO localhost', [250]);
+        $comando('STARTTLS', [220]);
+        if (!stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
+            throw new RuntimeException('Não foi possível proteger a conexão de e-mail.');
+        }
+        $comando('EHLO localhost', [250]);
+        $comando('AUTH LOGIN', [334]);
+        $comando(base64_encode($usuario), [334]);
+        $comando(base64_encode($senha), [235]);
+        $comando('MAIL FROM:<' . $remetente . '>', [250]);
+        $comando('RCPT TO:<' . $destinoEntrega . '>', [250, 251]);
+        $comando('DATA', [354]);
+        $corpo = str_replace(["\r\n", "\r"], "\n", $mensagem);
+        $corpo = str_replace("\n.", "\n..", $corpo);
+        $cabecalhos = [
+            'Date: ' . date(DATE_RFC2822),
+            'From: Controle de Máquinas <' . $remetente . '>',
+            'To: <' . $destinoEntrega . '>',
+            'Subject: =?UTF-8?B?' . base64_encode($assunto) . '?=',
+            'MIME-Version: 1.0',
+            'Content-Type: text/plain; charset=UTF-8',
+            'Content-Transfer-Encoding: 8bit',
+        ];
+        fwrite($socket, implode("\r\n", $cabecalhos) . "\r\n\r\n" . str_replace("\n", "\r\n", $corpo) . "\r\n.\r\n");
+        $resposta = $ler();
+        if ((int) substr($resposta, 0, 3) !== 250) throw new RuntimeException('O e-mail não foi aceito para envio.');
+        fwrite($socket, "QUIT\r\n");
+    } finally {
+        fclose($socket);
+    }
+}
+
 function usuarioLogado(): ?string {
     return isset($_SESSION['usuario_nome']) ? (string) $_SESSION['usuario_nome'] : null;
 }
 
 function exigirLogin(): void {
     if (usuarioLogado() !== null) return;
-    $destino = basename((string) ($_SERVER['REQUEST_URI'] ?? 'index.php'));
+    $destino = destinoSeguro((string) ($_SERVER['REQUEST_URI'] ?? 'index.php'));
     header('Location: login.php?destino=' . rawurlencode($destino));
     exit;
 }
@@ -95,6 +182,25 @@ function ipOpcional(mixed $value, string $campo = 'IP'): string {
         exit(e($campo) . ' inválido.');
     }
     return $ip;
+}
+
+function buscarMesaAtiva(PDO $pdo, mixed $id, bool $bloquear = false): array {
+    $mesaId = inteiroPositivo($id);
+    $sql = "SELECT id, nome FROM mesas WHERE id = ? AND status = 'ativo'" . ($bloquear ? ' FOR UPDATE' : '');
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$mesaId]);
+    $mesa = $stmt->fetch();
+    if (!$mesa) throw new RuntimeException('Mesa ativa não encontrada.');
+    return $mesa;
+}
+
+function patrimonioDisponivel(PDO $pdo, string $patrimonio, ?int $ignorarId = null): bool {
+    $sql = 'SELECT 1 FROM itens WHERE patrimonio_protocolo = ?';
+    $parametros = [$patrimonio];
+    if ($ignorarId !== null) { $sql .= ' AND id <> ?'; $parametros[] = $ignorarId; }
+    $stmt = $pdo->prepare($sql . ' LIMIT 1');
+    $stmt->execute($parametros);
+    return !$stmt->fetchColumn();
 }
 
 // function registrarLog($pdo, $mesa_id, $mensagem) {

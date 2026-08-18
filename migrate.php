@@ -28,6 +28,25 @@ if (!(int) $stmt->fetchColumn()) {
     echo 'Coluna de recuperação criada.' . PHP_EOL;
 }
 
+$novasColunas = [
+    'email' => 'ALTER TABLE usuarios ADD COLUMN email VARCHAR(255) NULL AFTER usuario',
+    'codigo_recuperacao_expira_em' => 'ALTER TABLE usuarios ADD COLUMN codigo_recuperacao_expira_em DATETIME NULL AFTER codigo_recuperacao_hash',
+    'codigo_recuperacao_tentativas' => 'ALTER TABLE usuarios ADD COLUMN codigo_recuperacao_tentativas TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER codigo_recuperacao_expira_em',
+];
+foreach ($novasColunas as $coluna => $sql) {
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = ? AND table_name = 'usuarios' AND column_name = ?");
+    $stmt->execute([$db, $coluna]);
+    if (!(int) $stmt->fetchColumn()) {
+        $pdo->exec($sql);
+        echo "Coluna criada: {$coluna}" . PHP_EOL;
+    }
+}
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = ? AND table_name = 'usuarios' AND index_name = 'uq_usuarios_email'");
+$stmt->execute([$db]);
+if (!(int) $stmt->fetchColumn()) {
+    $pdo->exec('CREATE UNIQUE INDEX uq_usuarios_email ON usuarios (email)');
+}
+
 $indices = [
     'idx_itens_patrimonio' => 'CREATE INDEX idx_itens_patrimonio ON itens (patrimonio_protocolo)',
     'idx_itens_status_mesa' => 'CREATE INDEX idx_itens_status_mesa ON itens (status, mesa_id)',

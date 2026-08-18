@@ -1,9 +1,10 @@
 <?php 
 include 'config.php';
-$id = $_GET['id'];
+$id = inteiroPositivo($_GET['id'] ?? null);
 $stmt = $pdo->prepare("SELECT * FROM itens WHERE id = ?");
 $stmt->execute([$id]);
 $item = $stmt->fetch();
+if (!$item) { http_response_code(404); exit('Equipamento não encontrado.'); }
 
 // Define a origem para o redirecionamento: se mesa_id for vazio, é 'avulso'
 $origem = empty($item['mesa_id']) ? 'avulso' : 'mesa';
@@ -24,6 +25,7 @@ $origem = empty($item['mesa_id']) ? 'avulso' : 'mesa';
 <body>
     <h2>Editar Equipamento</h2>
     <form action="acoes.php?acao=editar_item" method="POST">
+        <?= csrfField() ?>
         <input type="hidden" name="id" value="<?= $item['id'] ?>">
         <input type="hidden" name="origem" value="<?= $origem ?>">
         

@@ -9,8 +9,7 @@ if (usuarioLogado() !== null) {
 }
 
 $erro = '';
-$destino = (string) ($_GET['destino'] ?? $_POST['destino'] ?? 'index.php');
-if (str_contains($destino, '://') || str_starts_with($destino, '//')) $destino = 'index.php';
+$destino = destinoSeguro($_GET['destino'] ?? $_POST['destino'] ?? 'index.php');
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     exigirPostComCsrf();

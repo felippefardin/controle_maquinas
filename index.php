@@ -13,6 +13,12 @@ $resumo = $pdo->query("
         (SELECT COUNT(*) FROM itens) AS equipamentos,
         (SELECT COUNT(*) FROM itens WHERE mesa_id IS NULL) AS itens_avulsos
 ")->fetch();
+$itensParaTroca = $pdo->query("
+    SELECT i.id, i.tipo, i.patrimonio_protocolo, i.mesa_id, m.nome AS mesa_nome
+    FROM itens i INNER JOIN mesas m ON m.id = i.mesa_id AND m.status = 'ativo'
+    WHERE i.status = 'Ativo'
+    ORDER BY i.tipo, m.nome, i.patrimonio_protocolo
+")->fetchAll();
 ?>
 
 <div class="row mb-5 align-items-center">   
@@ -53,6 +59,7 @@ $resumo = $pdo->query("
     <div class="card-body p-4">
         <!-- Mantido 'identificacao' aqui caso o seu acoes.php espere isso ao criar, ou ajuste no acoes.php se necessário -->
         <form action="acoes.php?acao=criar_mesa" method="POST" class="row g-3 align-items-center">
+            <?= csrfField() ?>
             <div class="col-sm-4">
                 <input type="text" name="identificacao" class="form-control rounded-pill" placeholder="Nome da Mesa (ex: Mesa 10)" required>
             </div>
@@ -88,6 +95,7 @@ $resumo = $pdo->query("
         <div class="card mesa-card shadow-sm border-0 rounded-4">
             <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-4 border-0">
     <form action="acoes.php?acao=editar_mesa" method="POST" class="d-flex gap-2 align-items-center">
+        <?= csrfField() ?>
         <input type="hidden" name="id" value="<?= $mesa['id'] ?>">
         <!-- Alterado name para 'nome' e value para $mesa['nome'] -->
         <input type="text" name="nome" class="form-control form-control-sm border-0 fw-bold" 
@@ -96,11 +104,13 @@ $resumo = $pdo->query("
     </form>
     <div>
         <form action="acoes.php?acao=arquivar_mesa" method="POST" class="d-inline" onsubmit="return confirm('Arquivar esta mesa?')">
+            <?= csrfField() ?>
             <input type="hidden" name="id" value="<?= (int) $mesa['id'] ?>">
             <button class="btn btn-sm btn-outline-secondary rounded-pill me-2" title="Arquivar Mesa">📁</button>
         </form>
         <a href="historico_mesa.php?id=<?= $mesa['id'] ?>" class="btn btn-sm btn-outline-info rounded-pill me-2">🕒 Histórico</a>
         <form action="acoes.php?acao=deletar_mesa" method="POST" class="d-inline" onsubmit="return confirm('Excluir mesa permanentemente?')">
+            <?= csrfField() ?>
             <input type="hidden" name="id" value="<?= (int) $mesa['id'] ?>">
             <button class="btn btn-sm btn-outline-danger rounded-pill">Excluir Mesa</button>
         </form>
@@ -174,8 +184,10 @@ $resumo = $pdo->query("
                                 <?php endif; ?>
                                 
                                 <a href="manutencao.php?item_id=<?= $item['id'] ?>" class="btn btn-sm btn-outline-dark rounded-pill px-3 me-1">🛠️</a>
+                                <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 me-1" data-bs-toggle="modal" data-bs-target="#modalTroca" data-item-id="<?= (int) $item['id'] ?>" data-item-tipo="<?= e($item['tipo']) ?>" data-item-label="<?= e($item['tipo'] . ' — ' . $item['patrimonio_protocolo']) ?>">Trocar</button>
                                 <a href="editar_item.php?id=<?= $item['id'] ?>" class="btn btn-sm btn-link text-decoration-none text-muted">Editar</a>
                                 <form action="acoes.php?acao=remover_item" method="POST" class="d-inline" onsubmit="return confirm('Remover item?')">
+                                    <?= csrfField() ?>
                                     <input type="hidden" name="id" value="<?= (int) $item['id'] ?>">
                                     <button class="btn btn-sm btn-link text-danger text-decoration-none">Remover</button>
                                 </form>
@@ -193,6 +205,7 @@ $resumo = $pdo->query("
 <div class="modal fade" id="modalIP" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <form action="acoes.php?acao=salvar_ip_item" method="POST">
+      <?= csrfField() ?>
       <div class="modal-content">
         <div class="modal-header"><h5 class="modal-title">Configurar IP da CPU</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
         <div class="modal-body">
@@ -205,11 +218,29 @@ $resumo = $pdo->query("
   </div>
 </div>
 
+<div class="modal fade" id="modalTroca" tabindex="-1" aria-hidden="true"><div class="modal-dialog">
+  <form action="acoes.php?acao=trocar_itens" method="POST"><?= csrfField() ?>
+    <div class="modal-content"><div class="modal-header"><h5 class="modal-title">Trocar equipamento entre mesas</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body"><input type="hidden" name="item_origem_id" id="troca_item_origem_id"><p class="small text-muted">Equipamento selecionado: <strong id="troca_item_origem_label"></strong></p>
+        <label for="troca_item_destino_id" class="form-label">Equipamento da outra mesa</label><select name="item_destino_id" id="troca_item_destino_id" class="form-select" required><option value="">Selecione...</option>
+          <?php foreach ($itensParaTroca as $opcao): ?><option value="<?= (int) $opcao['id'] ?>" data-tipo="<?= e($opcao['tipo']) ?>"><?= e($opcao['mesa_nome'] . ' — ' . $opcao['tipo'] . ' — ' . $opcao['patrimonio_protocolo']) ?></option><?php endforeach; ?>
+        </select><div class="form-text">Somente equipamentos ativos e do mesmo tipo podem ser trocados.</div></div>
+      <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-success">Confirmar troca</button></div></div>
+  </form></div></div>
+
 <script>
   var modalIP = document.getElementById('modalIP');
   modalIP.addEventListener('show.bs.modal', function (event) {
     var button = event.relatedTarget;
     document.getElementById('modal_item_id').value = button.getAttribute('data-id');
+  });
+  var modalTroca = document.getElementById('modalTroca');
+  modalTroca.addEventListener('show.bs.modal', function (event) {
+    var button = event.relatedTarget, origemId = button.getAttribute('data-item-id'), tipo = button.getAttribute('data-item-tipo');
+    document.getElementById('troca_item_origem_id').value = origemId;
+    document.getElementById('troca_item_origem_label').textContent = button.getAttribute('data-item-label');
+    var select = document.getElementById('troca_item_destino_id'); select.value = '';
+    Array.from(select.options).forEach(function (option) { option.hidden = option.value !== '' && (option.value === origemId || option.getAttribute('data-tipo') !== tipo); });
   });
 </script>
 

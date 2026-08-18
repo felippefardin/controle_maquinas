@@ -51,6 +51,10 @@ if ($acao == 'adicionar_item') {
     $tipo = (string) ($_POST['tipo'] ?? '');
     if (!in_array($tipo, ['Tela', 'CPU', 'Outros'], true)) exit('Tipo de equipamento inválido.');
     $patrimonio = textoObrigatorio($_POST['patrimonio'] ?? '', 'Patrimônio');
+    if (!patrimonioDisponivel($pdo, $patrimonio)) {
+        http_response_code(409);
+        exit('Já existe um equipamento com este patrimônio/protocolo.');
+    }
     $ip = ipOpcional($_POST['ip_maquina'] ?? '');
     $mesa_id = (!empty($_POST['mesa_id']) && $_POST['mesa_id'] != '0') ? $_POST['mesa_id'] : null;
     
@@ -74,9 +78,16 @@ if ($acao == 'adicionar_item') {
 
 // --- ITENS ---
 if ($acao == 'editar_item') {
+    $id = inteiroPositivo($_POST['id'] ?? null);
     $stmtBusca = $pdo->prepare("SELECT * FROM itens WHERE id = ?");
-    $stmtBusca->execute([$_POST['id']]);
+    $stmtBusca->execute([$id]);
     $itemAntigo = $stmtBusca->fetch();
+    if (!$itemAntigo) exit('Equipamento não encontrado.');
+    $patrimonio = textoObrigatorio($_POST['patrimonio'] ?? '', 'Patrimônio');
+    if (!patrimonioDisponivel($pdo, $patrimonio, $id)) {
+        http_response_code(409);
+        exit('Já existe outro equipamento com este patrimônio/protocolo.');
+    }
 
     $mudancas = [];
     
@@ -88,39 +99,51 @@ if ($acao == 'editar_item') {
         $mudancas[] = "IP: {$itemAntigo['ip_maquina']} -> {$_POST['ip_maquina']}";
     }
 
-    if ($itemAntigo['mesa_id'] != $_POST['mesa_id']) {
-        $oldMesaName = "Avulso";
-        if ($itemAntigo['mesa_id']) {
-            $stmtM = $pdo->prepare("SELECT identificacao FROM mesas WHERE id = ?");
-            $stmtM->execute([$itemAntigo['mesa_id']]);
+    $mesaAnteriorId = !empty($itemAntigo['mesa_id']) ? (int) $itemAntigo['mesa_id'] : null;
+    $novaMesaId = !empty($_POST['mesa_id']) ? inteiroPositivo($_POST['mesa_id']) : null;
+    $mesaFoiAlterada = $mesaAnteriorId !== $novaMesaId;
+    $oldMesaName = 'Itens avulsos';
+    $newMesaName = 'Itens avulsos';
+
+    if ($mesaFoiAlterada) {
+        if ($mesaAnteriorId) {
+            $stmtM = $pdo->prepare("SELECT nome FROM mesas WHERE id = ?");
+            $stmtM->execute([$mesaAnteriorId]);
             $m = $stmtM->fetch();
-            $oldMesaName = $m['identificacao'] ?? $m['nome'] ?? 'Mesa';
+            $oldMesaName = $m['nome'] ?? 'Mesa';
         }
-        
-        $newMesaName = "Avulso";
-        if (!empty($_POST['mesa_id'])) {
-            $stmtM = $pdo->prepare("SELECT identificacao FROM mesas WHERE id = ?");
-            $stmtM->execute([$_POST['mesa_id']]);
+
+        if ($novaMesaId) {
+            $stmtM = $pdo->prepare("SELECT nome FROM mesas WHERE id = ?");
+            $stmtM->execute([$novaMesaId]);
             $m = $stmtM->fetch();
-            $newMesaName = $m['identificacao'] ?? $m['nome'] ?? 'Mesa';
+            $newMesaName = $m['nome'] ?? 'Mesa';
         }
-        
-        $mudancas[] = "Mesa: {$oldMesaName} -> {$newMesaName}";
     }
 
     $stmt = $pdo->prepare("UPDATE itens SET mesa_id = ?, tipo = ?, nome_personalizado = ?, patrimonio_protocolo = ?, ip_maquina = ? WHERE id = ?");
     $stmt->execute([
-        !empty($_POST['mesa_id']) ? $_POST['mesa_id'] : null, 
+        $novaMesaId,
         $_POST['tipo'], 
         $_POST['nome_personalizado'], 
-        $_POST['patrimonio'], 
+        $patrimonio, 
         $_POST['ip_maquina'], 
-        $_POST['id']
+        $id
     ]);
+
+    if ($mesaFoiAlterada) {
+        $descricaoItem = "{$itemAntigo['tipo']} (patrimônio {$itemAntigo['patrimonio_protocolo']})";
+        if ($mesaAnteriorId) {
+            registrarLog($pdo, $mesaAnteriorId, "Saída por transferência: {$descricaoItem} foi enviado para {$newMesaName}.");
+        }
+        if ($novaMesaId) {
+            registrarLog($pdo, $novaMesaId, "Entrada por transferência: {$descricaoItem} foi recebido de {$oldMesaName}.");
+        }
+    }
 
     if (!empty($mudancas)) {
         $msg = "Item {$itemAntigo['tipo']} ({$itemAntigo['patrimonio_protocolo']}) alterado: " . implode(", ", $mudancas);
-        registrarLog($pdo, !empty($_POST['mesa_id']) ? $_POST['mesa_id'] : $itemAntigo['mesa_id'], $msg);
+        registrarLog($pdo, $novaMesaId ?? $mesaAnteriorId, $msg);
     }
 
     header("Location: " . ($_POST['origem'] == 'avulso' ? "itens_avulsos.php" : "index.php"));
@@ -222,6 +245,39 @@ if ($acao == 'iniciar_manutencao') {
 
     header("Location: index.php");
     exit;
+}
+
+if ($acao == 'trocar_itens') {
+    $itemOrigemId = inteiroPositivo($_POST['item_origem_id'] ?? null);
+    $itemDestinoId = inteiroPositivo($_POST['item_destino_id'] ?? null);
+    if ($itemOrigemId === $itemDestinoId) exit('Selecione dois equipamentos diferentes.');
+    $pdo->beginTransaction();
+    try {
+        $ids = [$itemOrigemId, $itemDestinoId]; sort($ids);
+        $stmt = $pdo->prepare("SELECT id, mesa_id, tipo, patrimonio_protocolo, status FROM itens WHERE id IN (?, ?) FOR UPDATE");
+        $stmt->execute($ids);
+        $porId = [];
+        foreach ($stmt->fetchAll() as $registro) $porId[(int) $registro['id']] = $registro;
+        if (count($porId) !== 2) throw new RuntimeException('Um dos equipamentos não foi encontrado.');
+        $origem = $porId[$itemOrigemId]; $destino = $porId[$itemDestinoId];
+        if (empty($origem['mesa_id']) || empty($destino['mesa_id'])) throw new RuntimeException('Os dois equipamentos devem estar vinculados a mesas.');
+        if ((int) $origem['mesa_id'] === (int) $destino['mesa_id']) throw new RuntimeException('Os equipamentos já pertencem à mesma mesa.');
+        if ($origem['status'] !== 'Ativo' || $destino['status'] !== 'Ativo') throw new RuntimeException('Não é possível trocar equipamento em manutenção.');
+        if ($origem['tipo'] !== $destino['tipo']) throw new RuntimeException('A troca deve ser feita entre equipamentos do mesmo tipo.');
+        $mesaOrigem = buscarMesaAtiva($pdo, $origem['mesa_id'], true);
+        $mesaDestino = buscarMesaAtiva($pdo, $destino['mesa_id'], true);
+        $stmt = $pdo->prepare('UPDATE itens SET mesa_id = ? WHERE id = ?');
+        $stmt->execute([$mesaDestino['id'], $itemOrigemId]);
+        $stmt->execute([$mesaOrigem['id'], $itemDestinoId]);
+        registrarLog($pdo, $mesaOrigem['id'], "Troca: saiu {$origem['tipo']} patrimônio {$origem['patrimonio_protocolo']} e entrou patrimônio {$destino['patrimonio_protocolo']} da mesa {$mesaDestino['nome']}.");
+        registrarLog($pdo, $mesaDestino['id'], "Troca: saiu {$destino['tipo']} patrimônio {$destino['patrimonio_protocolo']} e entrou patrimônio {$origem['patrimonio_protocolo']} da mesa {$mesaOrigem['nome']}.");
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        http_response_code(422);
+        exit('Não foi possível realizar a troca: ' . e($e->getMessage()));
+    }
+    header('Location: index.php'); exit;
 }
 
 if ($acao == 'concluir_manutencao') {
