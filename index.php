@@ -1,6 +1,6 @@
-<?php 
-include 'config.php'; 
-include 'header.php'; 
+<?php
+include 'config.php';
+include 'header.php';
 
 $busca = isset($_GET['busca']) ? trim($_GET['busca']) : '';
 
@@ -17,188 +17,80 @@ $resumo = $pdo->query("
 
 $itensParaTroca = $pdo->query("
     SELECT i.id, i.tipo, i.patrimonio_protocolo, i.mesa_id, m.nome AS mesa_nome
-    FROM itens i 
+    FROM itens i
     INNER JOIN mesas m ON m.id = i.mesa_id AND m.status = 'ativo'
     WHERE i.status = 'Ativo'
     ORDER BY i.tipo, m.nome, i.patrimonio_protocolo
 ")->fetchAll();
 ?>
 
-<div class="row mb-5 align-items-center">   
-    <div class="col-md-5">
-        <h1 class="fw-bolder text-dark display-6">Controle de Máquinas </h1>
-        <p class="text-muted">Gerenciamento de mesas de trabalho.</p>
+<main class="inventory-page">
+<section class="page-heading" aria-labelledby="page-title">
+    <div>
+        <p class="eyebrow">GESTÃO DE PATRIMÔNIO</p>
+        <h1 id="page-title">Controle de Máquinas</h1>
+        <p class="page-description">Suas mesas, equipamentos e manutenções em um só lugar.</p>
     </div>
+    <button class="btn btn-primary new-desk-button" type="button" data-bs-toggle="collapse" data-bs-target="#novaMesaForm" aria-expanded="false" aria-controls="novaMesaForm">
+        <?= cmIcon('plus') ?> Nova mesa
+    </button>
+</section>
 
-    <div class="col-md-7 text-md-end">
-
-        <!-- Ícone adicionado aqui para garantir visibilidade ao lado dos botões do topo -->
-        <a href="maquinas_manutencao.php" 
-           class="btn btn-outline-danger px-3 py-2 fw-bold shadow-sm me-2" 
-           title="Máquinas em Manutenção">
-
-            <i class="fas fa-tools"></i> 
-            <span class="badge bg-danger ms-1">
-                <?php echo $total_manutencao; ?>
-            </span>
-        </a>
-
-        <a href="tutorial.php" 
-           class="btn btn-outline-primary px-4 py-2 fw-bold shadow-sm">
-            📖 Tutorial
-        </a>
-
-        <a href="arquivo_mesas.php" 
-           class="btn btn-outline-secondary px-4 py-2 fw-bold shadow-sm">
-            📁 Arquivo
-        </a>
-
-        <a href="itens_avulsos.php" 
-           class="btn btn-outline-info px-4 py-2 fw-bold shadow-sm">
-            📦 Itens Avulsos
-        </a>
-
+<section class="inventory-stats" aria-label="Resumo do inventário">
+    <div class="stat-card">
+        <span class="stat-icon"><?= cmIcon('desk') ?></span>
+        <div><span class="stat-label">Mesas ativas</span><strong class="stat-value"><?= (int) $resumo['mesas_ativas'] ?></strong></div>
     </div>
-</div>
-
-
-<div class="row g-3 mb-4" aria-label="Resumo do inventário">
-
-    <div class="col-6 col-lg-3">
-        <div class="card border-0 shadow-sm rounded-4 h-100">
-            <div class="card-body">
-                <div class="text-muted small">Mesas ativas</div>
-                <div class="fs-2 fw-bold">
-                    <?= (int) $resumo['mesas_ativas'] ?>
-                </div>
-            </div>
-        </div>
+    <div class="stat-card">
+        <span class="stat-icon stat-icon-blue"><?= cmIcon('monitor') ?></span>
+        <div><span class="stat-label">Equipamentos</span><strong class="stat-value"><?= (int) $resumo['equipamentos'] ?></strong></div>
     </div>
+    <a class="stat-card" href="itens_avulsos.php">
+        <span class="stat-icon stat-icon-teal"><?= cmIcon('box') ?></span>
+        <div><span class="stat-label">Itens avulsos</span><strong class="stat-value"><?= (int) $resumo['itens_avulsos'] ?></strong></div>
+        <?= cmIcon('arrow', 'stat-arrow') ?>
+    </a>
+    <a class="stat-card" href="maquinas_manutencao.php">
+        <span class="stat-icon stat-icon-amber"><?= cmIcon('tool') ?></span>
+        <div><span class="stat-label">Em manutenção</span><strong class="stat-value"><?= (int) $total_manutencao ?></strong></div>
+        <?= cmIcon('arrow', 'stat-arrow') ?>
+    </a>
+</section>
 
-    <div class="col-6 col-lg-3">
-        <div class="card border-0 shadow-sm rounded-4 h-100">
-            <div class="card-body">
-                <div class="text-muted small">Equipamentos</div>
-                <div class="fs-2 fw-bold">
-                    <?= (int) $resumo['equipamentos'] ?>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-6 col-lg-3">
-        <div class="card border-0 shadow-sm rounded-4 h-100">
-            <div class="card-body">
-                <div class="text-muted small">Itens avulsos</div>
-                <div class="fs-2 fw-bold text-info">
-                    <?= (int) $resumo['itens_avulsos'] ?>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-6 col-lg-3">
-        <div class="card border-0 shadow-sm rounded-4 h-100">
-            <div class="card-body">
-                <div class="text-muted small">Em manutenção</div>
-                <div class="fs-2 fw-bold text-danger">
-                    <?= (int) $total_manutencao ?>
-                </div>
-            </div>
-        </div>
-    </div>
-
-</div>
-
-
-<div class="row mb-5">
-
-    <div class="col-md-12">
-
-        <form action="index.php" 
-              method="GET" 
-              class="d-flex bg-white p-2 rounded-pill shadow-sm border">
-
-            <input 
-                type="text" 
-                name="busca" 
-                class="form-control border-0 rounded-pill ms-2" 
-                placeholder="Buscar por patrimônio, nome ou IP..." 
-                value="<?= htmlspecialchars($busca) ?>"
-            >
-
-            <button type="submit" class="btn btn-primary rounded-pill px-4">
-                Buscar
-            </button>
-
-            <?php if($busca): ?>
-
-                <a href="index.php" 
-                   class="btn btn-link text-secondary text-decoration-none">
-                    Limpar
-                </a>
-
-            <?php endif; ?>
-
-        </form>
-
-    </div>
-
-</div>
-
-
-<div class="card mb-5 shadow-sm border-0 bg-white rounded-4 overflow-hidden">
-
-    <div class="card-body p-4">
-
-        <!-- Mantido 'identificacao' aqui caso o seu acoes.php espere isso ao criar, ou ajuste no acoes.php se necessário -->
-
-        <form action="acoes.php?acao=criar_mesa" 
-              method="POST" 
-              class="row g-3 align-items-center">
-
+<div class="collapse" id="novaMesaForm">
+    <section class="create-desk-panel" aria-labelledby="create-desk-title">
+        <div><h2 id="create-desk-title">Adicionar uma mesa</h2><p>Crie um espaço para organizar os equipamentos.</p></div>
+        <form action="acoes.php?acao=criar_mesa" method="POST" class="create-desk-form">
             <?= csrfField() ?>
-
-            <div class="col-sm-4">
-
-                <input 
-                    type="text" 
-                    name="identificacao" 
-                    class="form-control rounded-pill" 
-                    placeholder="Nome da Mesa (ex: Mesa 10)" 
-                    required
-                >
-
-            </div>
-
-            <div class="col-auto">
-
-                <button type="submit" 
-                        class="btn btn-success fw-bold px-4 rounded-pill">
-                    + Criar Mesa
-                </button>
-
-            </div>
-
+            <div class="create-desk-field"><label for="identificacao" class="form-label">Nome da mesa</label><input id="identificacao" type="text" name="identificacao" class="form-control" placeholder="Ex.: Mesa 10" required></div>
+            <button type="submit" class="btn btn-primary"><?= cmIcon('plus') ?> Criar mesa</button>
         </form>
-
-    </div>
-
+    </section>
 </div>
 
+<section class="inventory-toolbar" aria-label="Buscar mesas e equipamentos">
+    <div><h2>Mesas de trabalho</h2><p>Organize e acompanhe os equipamentos de cada mesa.</p></div>
+    <form action="index.php" method="GET" class="inventory-search" role="search">
+        <label for="busca" class="visually-hidden">Buscar por patrimônio, nome ou IP</label>
+        <?= cmIcon('search') ?>
+        <input id="busca" type="search" name="busca" class="form-control" placeholder="Patrimônio, nome ou IP..." value="<?= htmlspecialchars($busca) ?>">
+        <?php if ($busca): ?><a href="index.php" class="clear-search" aria-label="Limpar busca" title="Limpar busca"><?= cmIcon('close') ?></a><?php endif; ?>
+        <button type="submit" class="btn btn-primary">Buscar</button>
+    </form>
+</section>
 
-<div class="row">
+<div class="row desk-list">
 
 <?php
 
 if ($busca) {
 
     $sql = "
-        SELECT DISTINCT m.* 
-        FROM mesas m 
+        SELECT DISTINCT m.*
+        FROM mesas m
 
-        LEFT JOIN itens i 
-            ON m.id = i.mesa_id 
+        LEFT JOIN itens i
+            ON m.id = i.mesa_id
 
         WHERE m.status = 'ativo'
 
@@ -226,13 +118,12 @@ if ($busca) {
 } else {
 
     $stmt = $pdo->query("
-        SELECT * 
-        FROM mesas 
-        WHERE status = 'ativo' 
+        SELECT *
+        FROM mesas
+        WHERE status = 'ativo'
         ORDER BY id DESC
     ");
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -242,13 +133,20 @@ if ($busca) {
 
 $mesas = $stmt->fetchAll();
 
-
 /*
 |--------------------------------------------------------------------------
 | EXIBE AS MESAS
 |--------------------------------------------------------------------------
 */
 
+if (!$mesas): ?>
+    <div class="col-12"><div class="inventory-empty">
+        <?= cmIcon($busca ? 'search' : 'desk') ?>
+        <h3><?= $busca ? 'Nenhuma mesa encontrada' : 'Tudo pronto para a primeira mesa' ?></h3>
+        <p><?= $busca ? 'Tente outro nome, patrimônio ou endereço IP.' : 'Clique em Nova mesa para começar a organizar seus equipamentos.' ?></p>
+        <?php if ($busca): ?><a class="btn btn-outline-primary" href="index.php">Limpar busca</a><?php endif; ?>
+    </div></div>
+<?php endif;
 foreach ($mesas as $mesa):
 
 ?>
@@ -257,87 +155,86 @@ foreach ($mesas as $mesa):
 
     <div class="card mesa-card shadow-sm border-0 rounded-4">
 
-        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-4 border-0">
+        <div class="card-header mesa-heading">
 
-            <form action="acoes.php?acao=editar_mesa" 
-                  method="POST" 
-                  class="d-flex gap-2 align-items-center">
+            <form action="acoes.php?acao=editar_mesa"
+                  method="POST"
+                  class="mesa-name-form">
+                <span class="mesa-icon"><?= cmIcon('desk') ?></span>
 
                 <?= csrfField() ?>
 
-                <input 
-                    type="hidden" 
-                    name="id" 
+                <input
+                    type="hidden"
+                    name="id"
                     value="<?= $mesa['id'] ?>"
                 >
 
                 <!-- Alterado name para 'nome' e value para $mesa['nome'] -->
 
-                <input 
-                    type="text" 
-                    name="nome" 
-                    class="form-control form-control-sm border-0 fw-bold" 
-                    value="<?= htmlspecialchars($mesa['nome'] ?? '') ?>" 
-                    required 
-                    style="width: 200px;"
+                <input
+                    type="text"
+                    name="nome"
+                    class="form-control mesa-name"
+                    aria-label="Nome da mesa"
+                    value="<?= htmlspecialchars($mesa['nome'] ?? '') ?>"
+                    required
+                    title="Editar nome da mesa"
                 >
 
-                <button type="submit" 
-                        class="btn btn-sm btn-outline-warning rounded-pill px-3">
+                <button type="submit"
+                        class="btn btn-sm mesa-save" title="Salvar nome da mesa">
                     Salvar
                 </button>
 
             </form>
 
-
-            <div>
-
-                <form action="acoes.php?acao=arquivar_mesa" 
-                      method="POST" 
-                      class="d-inline" 
+            <div class="mesa-actions">
+                <span class="status-active"><span></span> Ativa</span>
+                <form action="acoes.php?acao=arquivar_mesa"
+                      method="POST"
+                      class="d-inline"
                       onsubmit="return confirm('Arquivar esta mesa?')">
 
                     <?= csrfField() ?>
 
-                    <input 
-                        type="hidden" 
-                        name="id" 
+                    <input
+                        type="hidden"
+                        name="id"
                         value="<?= (int) $mesa['id'] ?>"
                     >
 
-                    <button 
-                        class="btn btn-sm btn-outline-secondary rounded-pill me-2" 
-                        title="Arquivar Mesa">
-                        📁
+                    <button
+                        class="btn btn-sm btn-outline-secondary rounded-pill me-2"
+                        title="Arquivar mesa" aria-label="Arquivar mesa">
+                        <?= cmIcon('archive') ?>
                     </button>
 
                 </form>
 
-
-                <a 
-                    href="historico_mesa.php?id=<?= $mesa['id'] ?>" 
+                <a
+                    href="historico_mesa.php?id=<?= $mesa['id'] ?>"
                     class="btn btn-sm btn-outline-info rounded-pill me-2">
-                    🕒 Histórico
+                    <?= cmIcon('clock') ?> Histórico
                 </a>
 
-
-                <form 
-                    action="acoes.php?acao=deletar_mesa" 
-                    method="POST" 
-                    class="d-inline" 
+                <form
+                    action="acoes.php?acao=deletar_mesa"
+                    method="POST"
+                    class="d-inline"
                     onsubmit="return confirm('Excluir mesa permanentemente?')">
 
                     <?= csrfField() ?>
 
-                    <input 
-                        type="hidden" 
-                        name="id" 
+                    <input
+                        type="hidden"
+                        name="id"
                         value="<?= (int) $mesa['id'] ?>"
                     >
 
-                    <button 
+                    <button
                         class="btn btn-sm btn-outline-danger rounded-pill">
-                        Excluir Mesa
+                        <?= cmIcon('trash') ?> Excluir
                     </button>
 
                 </form>
@@ -346,30 +243,28 @@ foreach ($mesas as $mesa):
 
         </div>
 
+        <div class="card-body mesa-content">
 
-        <div class="card-body px-4 pb-4 pt-0">
+            <div class="equipment-toolbar"><span>Equipamentos da mesa</span>
 
-            <div class="mb-3">
-
-                <a 
-                    href="gerenciar_itens.php?mesa_id=<?= $mesa['id'] ?>" 
+                <a
+                    href="gerenciar_itens.php?mesa_id=<?= $mesa['id'] ?>"
                     class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm">
-                    + Adicionar Equipamento
+                    <?= cmIcon('plus') ?> Adicionar equipamento
                 </a>
 
             </div>
 
-
-            <div class="list-group list-group-flush border rounded-4 overflow-hidden shadow-none">
+            <div class="list-group list-group-flush equipment-list">
 
             <?php
 
             $stmt_i = $pdo->prepare("
-                SELECT 
+                SELECT
                     i.*,
 
                     EXISTS(
-                        SELECT 1 
+                        SELECT 1
                         FROM manutencoes mt
 
                         WHERE mt.substituto_item_id = i.id
@@ -381,7 +276,7 @@ foreach ($mesas as $mesa):
 
                 WHERE i.mesa_id = ?
 
-                ORDER BY 
+                ORDER BY
                     equipamento_substituto DESC,
                     CASE WHEN i.status = 'Manutenção' THEN 1 ELSE 0 END,
                     i.id
@@ -390,7 +285,6 @@ foreach ($mesas as $mesa):
             $stmt_i->execute([$mesa['id']]);
 
             $itens = $stmt_i->fetchAll();
-
 
             if(!$itens) {
 
@@ -402,30 +296,26 @@ foreach ($mesas as $mesa):
 
             }
 
-
             foreach ($itens as $item):
 
                 $em_manutencao = ($item['status'] == 'Manutenção');
 
             ?>
 
-
             <?php if ($em_manutencao): ?>
 
-
-            <div class="list-group-item d-flex justify-content-between align-items-center py-3 px-4 border-bottom bg-light">
+            <div class="list-group-item equipment-row equipment-maintenance">
 
                 <div class="d-flex align-items-center gap-2">
 
-                    <a 
+                    <a
                         href="manutencao.php?item_id=<?= $item['id'] ?>"
                         class="btn btn-sm btn-danger rounded-pill px-3 fw-bold"
                         title="Abrir manutenção">
 
-                        🛠 Em manutenção
+                        <?= cmIcon('tool') ?> Em manutenção
 
                     </a>
-
 
                     <span class="text-muted small">
 
@@ -443,8 +333,7 @@ foreach ($mesas as $mesa):
 
                 </div>
 
-
-                <a 
+                <a
                     href="manutencao.php?item_id=<?= $item['id'] ?>"
                     class="btn btn-sm btn-outline-danger rounded-pill px-3">
 
@@ -454,18 +343,13 @@ foreach ($mesas as $mesa):
 
             </div>
 
-
             <?php else: ?>
 
+            <div class="list-group-item equipment-row">
 
-            <div class="list-group-item d-flex justify-content-between align-items-center py-3 px-4 border-bottom">
+                <div class="equipment-info">
 
-                <div>
-
-                    <span class="badge bg-dark me-2 rounded-pill">
-                        <?= e($item['tipo']) ?>
-                    </span>
-
+                    <span class="equipment-icon" title="<?= e($item['tipo']) ?>"><?= cmIcon($item['tipo'] === 'Monitor' ? 'monitor' : ($item['tipo'] === 'CPU' ? 'cpu' : 'box')) ?></span>
 
                     <?php if (!empty($item['equipamento_substituto'])): ?>
 
@@ -475,10 +359,9 @@ foreach ($mesas as $mesa):
 
                     <?php endif; ?>
 
-
                     <strong>
 
-                        <?= 
+                        <?=
                             $item['tipo'] == 'Outros'
                             ? htmlspecialchars($item['nome_personalizado'])
                             : $item['tipo']
@@ -486,12 +369,11 @@ foreach ($mesas as $mesa):
 
                     </strong>
 
-
                     <span class="text-muted ms-2 small font-monospace">
 
                         <?= htmlspecialchars($item['patrimonio_protocolo']) ?>
 
-                        <?= 
+                        <?=
                             !empty($item['ip_maquina'])
                             ? ' | IP: ' . htmlspecialchars($item['ip_maquina'])
                             : ''
@@ -501,55 +383,47 @@ foreach ($mesas as $mesa):
 
                 </div>
 
-
-                <div class="btn-group">
-
+                <div class="equipment-actions">
 
                     <?php if ($item['tipo'] == 'CPU' && empty($item['ip_maquina'])): ?>
 
-
-                        <button 
-                            type="button" 
-                            class="btn btn-sm btn-outline-secondary rounded-pill me-1" 
-                            data-bs-toggle="modal" 
-                            data-bs-target="#modalIP" 
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-outline-secondary rounded-pill me-1"
+                            data-bs-toggle="modal"
+                            data-bs-target="#modalIP"
                             data-id="<?= $item['id'] ?>">
 
-                            ➕ IP
+                            <?= cmIcon('plus') ?> IP
 
                         </button>
 
-
                     <?php elseif (!empty($item['ip_maquina'])): ?>
 
+                        <a
+                            href="rdp://<?= htmlspecialchars($item['ip_maquina']) ?>"
+                            class="btn btn-sm btn-outline-primary rounded-pill px-3 me-1"
+                            title="Acessar via RDP" aria-label="Acessar via RDP">
 
-                        <a 
-                            href="rdp://<?= htmlspecialchars($item['ip_maquina']) ?>" 
-                            class="btn btn-sm btn-outline-primary rounded-pill px-3 me-1" 
-                            title="Acessar via RDP">
-
-                            🖥️
+                            <?= cmIcon('monitor') ?>
 
                         </a>
 
-
                     <?php endif; ?>
 
+                    <a
+                        href="manutencao.php?item_id=<?= $item['id'] ?>"
+                        class="btn btn-sm btn-outline-dark rounded-pill px-3 me-1" title="Abrir manutenção" aria-label="Abrir manutenção">
 
-                    <a 
-                        href="manutencao.php?item_id=<?= $item['id'] ?>" 
-                        class="btn btn-sm btn-outline-dark rounded-pill px-3 me-1">
-
-                        🛠️
+                        <?= cmIcon('tool') ?>
 
                     </a>
 
-
-                    <button 
-                        type="button" 
+                    <button
+                        type="button"
                         class="btn btn-sm btn-outline-success rounded-pill px-3 me-1"
 
-                        data-bs-toggle="modal" 
+                        data-bs-toggle="modal"
                         data-bs-target="#modalTroca"
 
                         data-item-id="<?= (int) $item['id'] ?>"
@@ -564,31 +438,29 @@ foreach ($mesas as $mesa):
 
                     </button>
 
-
-                    <a 
-                        href="editar_item.php?id=<?= $item['id'] ?>" 
+                    <a
+                        href="editar_item.php?id=<?= $item['id'] ?>"
                         class="btn btn-sm btn-link text-decoration-none text-muted">
 
                         Editar
 
                     </a>
 
-
-                    <form 
-                        action="acoes.php?acao=remover_item" 
-                        method="POST" 
-                        class="d-inline" 
+                    <form
+                        action="acoes.php?acao=remover_item"
+                        method="POST"
+                        class="d-inline"
                         onsubmit="return confirm('Remover item?')">
 
                         <?= csrfField() ?>
 
-                        <input 
-                            type="hidden" 
-                            name="id" 
+                        <input
+                            type="hidden"
+                            name="id"
                             value="<?= (int) $item['id'] ?>"
                         >
 
-                        <button 
+                        <button
                             class="btn btn-sm btn-link text-danger text-decoration-none">
 
                             Remover
@@ -601,12 +473,9 @@ foreach ($mesas as $mesa):
 
             </div>
 
-
             <?php endif; ?>
 
-
             <?php endforeach; ?>
-
 
             </div>
 
@@ -616,20 +485,15 @@ foreach ($mesas as $mesa):
 
 </div>
 
-
 <?php endforeach; ?>
 
-
 </div>
-
-
 
 <!-- ==========================================================
      MODAL IP
 ========================================================== -->
 
-
-<div class="modal fade" id="modalIP" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="modalIP" tabindex="-1" aria-hidden="true" aria-labelledby="modalIPTitle">
 
     <div class="modal-dialog">
 
@@ -641,42 +505,41 @@ foreach ($mesas as $mesa):
 
                 <div class="modal-header">
 
-                    <h5 class="modal-title">
+                    <h5 class="modal-title" id="modalIPTitle">
                         Configurar IP da CPU
                     </h5>
 
-                    <button 
-                        type="button" 
-                        class="btn-close" 
-                        data-bs-dismiss="modal">
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal" aria-label="Fechar">
                     </button>
 
                 </div>
 
-
                 <div class="modal-body">
 
-                    <input 
-                        type="hidden" 
-                        name="item_id" 
+                    <input
+                        type="hidden"
+                        name="item_id"
                         id="modal_item_id"
                     >
 
-                    <input 
-                        type="text" 
-                        name="ip_maquina" 
-                        class="form-control" 
-                        placeholder="172.17.16.45" 
+                    <input
+                        type="text"
+                        name="ip_maquina"
+                        aria-label="Endereço IP da CPU"
+                        class="form-control"
+                        placeholder="172.17.16.45"
                         required
                     >
 
                 </div>
 
-
                 <div class="modal-footer">
 
-                    <button 
-                        type="submit" 
+                    <button
+                        type="submit"
                         class="btn btn-primary">
 
                         Salvar IP
@@ -693,14 +556,11 @@ foreach ($mesas as $mesa):
 
 </div>
 
-
-
 <!-- ==========================================================
      MODAL TROCA
 ========================================================== -->
 
-
-<div class="modal fade" id="modalTroca" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="modalTroca" tabindex="-1" aria-hidden="true" aria-labelledby="modalTrocaTitle">
 
     <div class="modal-dialog">
 
@@ -710,31 +570,27 @@ foreach ($mesas as $mesa):
 
             <div class="modal-content">
 
-
                 <div class="modal-header">
 
-                    <h5 class="modal-title">
+                    <h5 class="modal-title" id="modalTrocaTitle">
                         Trocar equipamento entre mesas
                     </h5>
 
-                    <button 
-                        type="button" 
-                        class="btn-close" 
-                        data-bs-dismiss="modal">
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal" aria-label="Fechar">
                     </button>
 
                 </div>
 
-
                 <div class="modal-body">
 
-
-                    <input 
-                        type="hidden" 
-                        name="item_origem_id" 
+                    <input
+                        type="hidden"
+                        name="item_origem_id"
                         id="troca_item_origem_id"
                     >
-
 
                     <p class="small text-muted">
 
@@ -744,32 +600,28 @@ foreach ($mesas as $mesa):
 
                     </p>
 
-
-                    <label 
-                        for="troca_item_destino_id" 
+                    <label
+                        for="troca_item_destino_id"
                         class="form-label">
 
                         Equipamento da outra mesa
 
                     </label>
 
-
-                    <select 
-                        name="item_destino_id" 
-                        id="troca_item_destino_id" 
-                        class="form-select" 
+                    <select
+                        name="item_destino_id"
+                        id="troca_item_destino_id"
+                        class="form-select"
                         required>
 
                         <option value="">
                             Selecione...
                         </option>
 
-
                         <?php foreach ($itensParaTroca as $opcao): ?>
 
-
-                            <option 
-                                value="<?= (int) $opcao['id'] ?>" 
+                            <option
+                                value="<?= (int) $opcao['id'] ?>"
                                 data-tipo="<?= e($opcao['tipo']) ?>">
 
                                 <?= e(
@@ -782,12 +634,9 @@ foreach ($mesas as $mesa):
 
                             </option>
 
-
                         <?php endforeach; ?>
 
-
                     </select>
-
 
                     <div class="form-text">
 
@@ -797,28 +646,24 @@ foreach ($mesas as $mesa):
 
                 </div>
 
-
                 <div class="modal-footer">
 
-
-                    <button 
-                        type="button" 
-                        class="btn btn-secondary" 
+                    <button
+                        type="button"
+                        class="btn btn-secondary"
                         data-bs-dismiss="modal">
 
                         Cancelar
 
                     </button>
 
-
-                    <button 
-                        type="submit" 
+                    <button
+                        type="submit"
                         class="btn btn-success">
 
                         Confirmar troca
 
                     </button>
-
 
                 </div>
 
@@ -829,8 +674,6 @@ foreach ($mesas as $mesa):
     </div>
 
 </div>
-
-
 
 <script>
 
@@ -845,7 +688,6 @@ modalIP.addEventListener('show.bs.modal', function (event) {
 
 });
 
-
 var modalTroca = document.getElementById('modalTroca');
 
 modalTroca.addEventListener('show.bs.modal', function (event) {
@@ -856,19 +698,15 @@ modalTroca.addEventListener('show.bs.modal', function (event) {
 
     var tipo = button.getAttribute('data-item-tipo');
 
-
     document.getElementById('troca_item_origem_id').value =
         origemId;
-
 
     document.getElementById('troca_item_origem_label').textContent =
         button.getAttribute('data-item-label');
 
-
     var select = document.getElementById('troca_item_destino_id');
 
     select.value = '';
-
 
     Array.from(select.options).forEach(function (option) {
 
@@ -887,5 +725,5 @@ modalTroca.addEventListener('show.bs.modal', function (event) {
 
 </script>
 
-
+</main>
 <?php include 'footer.php'; ?>
