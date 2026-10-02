@@ -18,9 +18,10 @@ $resumo = $pdo->query("
 $itensParaTroca = $pdo->query("
     SELECT i.id, i.tipo, i.patrimonio_protocolo, i.mesa_id, m.nome AS mesa_nome
     FROM itens i
-    INNER JOIN mesas m ON m.id = i.mesa_id AND m.status = 'ativo'
+    LEFT JOIN mesas m ON m.id = i.mesa_id AND m.status = 'ativo'
     WHERE i.status = 'Ativo'
-    ORDER BY i.tipo, m.nome, i.patrimonio_protocolo
+      AND (i.mesa_id IS NULL OR m.id IS NOT NULL)
+    ORDER BY i.tipo, (i.mesa_id IS NULL) DESC, m.nome, i.patrimonio_protocolo
 ")->fetchAll();
 ?>
 
@@ -573,7 +574,7 @@ foreach ($mesas as $mesa):
                 <div class="modal-header">
 
                     <h5 class="modal-title" id="modalTrocaTitle">
-                        Trocar equipamento entre mesas
+                        Trocar equipamento
                     </h5>
 
                     <button
@@ -604,7 +605,7 @@ foreach ($mesas as $mesa):
                         for="troca_item_destino_id"
                         class="form-label">
 
-                        Equipamento da outra mesa
+                        Equipamento de destino
 
                     </label>
 
@@ -625,7 +626,7 @@ foreach ($mesas as $mesa):
                                 data-tipo="<?= e($opcao['tipo']) ?>">
 
                                 <?= e(
-                                    $opcao['mesa_nome']
+                                    ($opcao['mesa_nome'] ?? 'Itens avulsos')
                                     . ' — '
                                     . $opcao['tipo']
                                     . ' — '
@@ -640,7 +641,7 @@ foreach ($mesas as $mesa):
 
                     <div class="form-text">
 
-                        Somente equipamentos ativos e do mesmo tipo podem ser trocados.
+                        Você pode trocar por um equipamento ativo do mesmo tipo, inclusive um item avulso.
 
                     </div>
 

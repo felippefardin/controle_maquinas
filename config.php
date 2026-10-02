@@ -221,6 +221,7 @@ function registrarLog($pdo, $mesa_id, $mensagem) {
 
 function garantirEstruturaManutencao($pdo) {
     $pdo->exec("ALTER TABLE manutencoes ADD COLUMN IF NOT EXISTS substituto_item_id INT NULL AFTER item_id");
+    $pdo->exec("ALTER TABLE manutencoes ADD COLUMN IF NOT EXISTS substituto_mesa_origem_id INT NULL AFTER substituto_item_id");
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS manutencao_anexos (
             id INT NOT NULL AUTO_INCREMENT,

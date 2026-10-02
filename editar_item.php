@@ -17,7 +17,7 @@ $origem = empty($item['mesa_id']) ? 'avulso' : 'mesa';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <style>
-        body { font-family: sans-serif; padding: 20px; line-height: 1.6; }
+        body { padding: 20px; line-height: 1.6; }
         form { background: #eee; padding: 20px; border-radius: 8px; display: inline-block; min-width: 350px; }
         input, select { display: block; margin-bottom: 10px; padding: 8px; width: 100%; }
     </style>

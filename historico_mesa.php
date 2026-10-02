@@ -17,6 +17,7 @@ $logs = $stmtLog->fetchAll();
 <html lang="pt-br">
 <head>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=<?= (int) filemtime(__DIR__ . '/style.css') ?>">
     <title>Histórico - <?php echo $mesa['nome']; ?></title>
 </head>
 <body class="p-4">

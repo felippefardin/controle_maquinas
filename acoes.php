@@ -48,6 +48,39 @@ if ($acao == 'deletar_mesa') {
 
 // --- ITENS ---
 if ($acao == 'adicionar_item') {
+    $mesa_id = (!empty($_POST['mesa_id']) && $_POST['mesa_id'] != '0') ? inteiroPositivo($_POST['mesa_id']) : null;
+    $origemItem = (string) ($_POST['origem_item'] ?? 'novo');
+
+    if ($origemItem === 'avulso') {
+        if ($mesa_id === null) exit('Selecione uma mesa para vincular o equipamento.');
+        $itemAvulsoId = inteiroPositivo($_POST['item_avulso_id'] ?? null);
+
+        try {
+            $pdo->beginTransaction();
+            $mesa = buscarMesaAtiva($pdo, $mesa_id, true);
+
+            $stmtItem = $pdo->prepare("SELECT id, tipo, patrimonio_protocolo FROM itens WHERE id = ? AND mesa_id IS NULL AND status = 'Ativo' FOR UPDATE");
+            $stmtItem->execute([$itemAvulsoId]);
+            $itemAvulso = $stmtItem->fetch();
+            if (!$itemAvulso) {
+                throw new RuntimeException('O equipamento avulso não está mais disponível.');
+            }
+
+            $stmt = $pdo->prepare('UPDATE itens SET mesa_id = ? WHERE id = ?');
+            $stmt->execute([$mesa_id, $itemAvulsoId]);
+            registrarLog($pdo, $mesa_id, "Item avulso vinculado: {$itemAvulso['tipo']} (Patrimônio: {$itemAvulso['patrimonio_protocolo']})");
+            $pdo->commit();
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            http_response_code(422);
+            exit('Não foi possível vincular o equipamento: ' . e($e->getMessage()));
+        }
+
+        header('Location: index.php');
+        exit;
+    }
+
+    if ($origemItem !== 'novo') exit('Opção de inclusão inválida.');
     $tipo = (string) ($_POST['tipo'] ?? '');
     if (!in_array($tipo, ['Tela', 'CPU', 'Outros'], true)) exit('Tipo de equipamento inválido.');
     $patrimonio = textoObrigatorio($_POST['patrimonio'] ?? '', 'Patrimônio');
@@ -56,8 +89,7 @@ if ($acao == 'adicionar_item') {
         exit('Já existe um equipamento com este patrimônio/protocolo.');
     }
     $ip = ipOpcional($_POST['ip_maquina'] ?? '');
-    $mesa_id = (!empty($_POST['mesa_id']) && $_POST['mesa_id'] != '0') ? $_POST['mesa_id'] : null;
-    
+
     $stmt = $pdo->prepare("INSERT INTO itens (mesa_id, tipo, nome_personalizado, patrimonio_protocolo, ip_maquina) VALUES (?, ?, ?, ?, ?)");
     $stmt->execute([
         $mesa_id, 
@@ -180,18 +212,29 @@ if ($acao == 'iniciar_manutencao') {
 
     $pdo->beginTransaction();
     try {
-        $stmtI = $pdo->prepare("SELECT mesa_id FROM itens WHERE id = ? FOR UPDATE");
+        $stmtI = $pdo->prepare("SELECT mesa_id, status FROM itens WHERE id = ? FOR UPDATE");
         $stmtI->execute([$item_id]);
         $item = $stmtI->fetch();
         if (!$item) {
             throw new RuntimeException('Equipamento não encontrado.');
         }
+        if ($item['status'] !== 'Ativo') {
+            throw new RuntimeException('O equipamento já está em manutenção.');
+        }
 
         if ($substituto_id) {
             $stmtS = $pdo->prepare("
-                SELECT id, tipo, nome_personalizado, patrimonio_protocolo
-                FROM itens
-                WHERE id = ? AND mesa_id IS NULL AND status = 'Ativo'
+                SELECT i.id, i.tipo, i.nome_personalizado, i.patrimonio_protocolo,
+                       i.mesa_id, m.nome AS mesa_nome
+                FROM itens i
+                LEFT JOIN mesas m ON m.id = i.mesa_id AND m.status = 'ativo'
+                WHERE i.id = ? AND i.status = 'Ativo'
+                  AND (i.mesa_id IS NULL OR m.id IS NOT NULL)
+                  AND NOT EXISTS (
+                      SELECT 1 FROM manutencoes mt
+                      WHERE mt.substituto_item_id = i.id
+                        AND mt.status_manutencao = 'Aberto'
+                  )
                 FOR UPDATE
             ");
             $stmtS->execute([$substituto_id]);
@@ -202,16 +245,19 @@ if ($acao == 'iniciar_manutencao') {
             if (empty($item['mesa_id'])) {
                 throw new RuntimeException('Só é possível vincular um substituto quando o equipamento pertence a uma mesa.');
             }
+            if (!empty($substituto['mesa_id']) && (int) $substituto['mesa_id'] === (int) $item['mesa_id']) {
+                throw new RuntimeException('Escolha um substituto avulso ou vinculado a outra mesa.');
+            }
         }
 
         $stmt = $pdo->prepare("UPDATE itens SET status = 'Manutenção' WHERE id = ?");
         $stmt->execute([$item_id]);
 
         $stmtM = $pdo->prepare("
-            INSERT INTO manutencoes (item_id, mesa_id, substituto_item_id, descricao_problema, status_manutencao)
-            VALUES (?, ?, ?, ?, 'Aberto')
+            INSERT INTO manutencoes (item_id, mesa_id, substituto_item_id, substituto_mesa_origem_id, descricao_problema, status_manutencao)
+            VALUES (?, ?, ?, ?, ?, 'Aberto')
         ");
-        $stmtM->execute([$item_id, $item['mesa_id'], $substituto_id, $_POST['problema']]);
+        $stmtM->execute([$item_id, $item['mesa_id'], $substituto_id, $substituto['mesa_id'] ?? null, $_POST['problema']]);
         $manutencao_id = (int) $pdo->lastInsertId();
 
         if ($substituto_id) {
@@ -230,11 +276,19 @@ if ($acao == 'iniciar_manutencao') {
             $nome_substituto = $substituto['tipo'] === 'Outros'
                 ? $substituto['nome_personalizado']
                 : $substituto['tipo'];
+            $origem_substituto = empty($substituto['mesa_id']) ? 'dos itens avulsos' : "da mesa {$substituto['mesa_nome']}";
             registrarLog(
                 $pdo,
                 $item['mesa_id'],
-                "Equipamento avulso vinculado como substituto: {$nome_substituto}, patrimônio {$substituto['patrimonio_protocolo']}{$detalhe_ip}."
+                "Equipamento substituto recebido {$origem_substituto}: {$nome_substituto}, patrimônio {$substituto['patrimonio_protocolo']}{$detalhe_ip}."
             );
+            if (!empty($substituto['mesa_id'])) {
+                registrarLog(
+                    $pdo,
+                    $substituto['mesa_id'],
+                    "Equipamento {$nome_substituto}, patrimônio {$substituto['patrimonio_protocolo']}, transferido temporariamente para a mesa #{$item['mesa_id']} durante manutenção."
+                );
+            }
         }
         $pdo->commit();
         salvarAnexosManutencao($pdo, $manutencao_id, $_FILES['documentos'] ?? []);
@@ -260,17 +314,25 @@ if ($acao == 'trocar_itens') {
         foreach ($stmt->fetchAll() as $registro) $porId[(int) $registro['id']] = $registro;
         if (count($porId) !== 2) throw new RuntimeException('Um dos equipamentos não foi encontrado.');
         $origem = $porId[$itemOrigemId]; $destino = $porId[$itemDestinoId];
-        if (empty($origem['mesa_id']) || empty($destino['mesa_id'])) throw new RuntimeException('Os dois equipamentos devem estar vinculados a mesas.');
-        if ((int) $origem['mesa_id'] === (int) $destino['mesa_id']) throw new RuntimeException('Os equipamentos já pertencem à mesma mesa.');
         if ($origem['status'] !== 'Ativo' || $destino['status'] !== 'Ativo') throw new RuntimeException('Não é possível trocar equipamento em manutenção.');
         if ($origem['tipo'] !== $destino['tipo']) throw new RuntimeException('A troca deve ser feita entre equipamentos do mesmo tipo.');
-        $mesaOrigem = buscarMesaAtiva($pdo, $origem['mesa_id'], true);
-        $mesaDestino = buscarMesaAtiva($pdo, $destino['mesa_id'], true);
+        if (empty($origem['mesa_id']) && empty($destino['mesa_id'])) throw new RuntimeException('Selecione pelo menos um equipamento vinculado a uma mesa.');
+        if (!empty($origem['mesa_id']) && !empty($destino['mesa_id']) && (int) $origem['mesa_id'] === (int) $destino['mesa_id']) {
+            throw new RuntimeException('Os equipamentos já pertencem à mesma mesa.');
+        }
+        $mesaOrigem = empty($origem['mesa_id']) ? null : buscarMesaAtiva($pdo, $origem['mesa_id'], true);
+        $mesaDestino = empty($destino['mesa_id']) ? null : buscarMesaAtiva($pdo, $destino['mesa_id'], true);
         $stmt = $pdo->prepare('UPDATE itens SET mesa_id = ? WHERE id = ?');
-        $stmt->execute([$mesaDestino['id'], $itemOrigemId]);
-        $stmt->execute([$mesaOrigem['id'], $itemDestinoId]);
-        registrarLog($pdo, $mesaOrigem['id'], "Troca: saiu {$origem['tipo']} patrimônio {$origem['patrimonio_protocolo']} e entrou patrimônio {$destino['patrimonio_protocolo']} da mesa {$mesaDestino['nome']}.");
-        registrarLog($pdo, $mesaDestino['id'], "Troca: saiu {$destino['tipo']} patrimônio {$destino['patrimonio_protocolo']} e entrou patrimônio {$origem['patrimonio_protocolo']} da mesa {$mesaOrigem['nome']}.");
+        $stmt->execute([$mesaDestino['id'] ?? null, $itemOrigemId]);
+        $stmt->execute([$mesaOrigem['id'] ?? null, $itemDestinoId]);
+        if ($mesaOrigem !== null) {
+            $procedencia = $mesaDestino !== null ? "da mesa {$mesaDestino['nome']}" : 'dos itens avulsos';
+            registrarLog($pdo, $mesaOrigem['id'], "Troca: saiu {$origem['tipo']} patrimônio {$origem['patrimonio_protocolo']} e entrou patrimônio {$destino['patrimonio_protocolo']} {$procedencia}.");
+        }
+        if ($mesaDestino !== null) {
+            $procedencia = $mesaOrigem !== null ? "da mesa {$mesaOrigem['nome']}" : 'dos itens avulsos';
+            registrarLog($pdo, $mesaDestino['id'], "Troca: saiu {$destino['tipo']} patrimônio {$destino['patrimonio_protocolo']} e entrou patrimônio {$origem['patrimonio_protocolo']} {$procedencia}.");
+        }
         $pdo->commit();
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
@@ -283,15 +345,22 @@ if ($acao == 'trocar_itens') {
 if ($acao == 'concluir_manutencao') {
     $manutencao_id = (int) $_POST['manutencao_id'];
     $decisao = $_POST['decisao'] ?? 'retornar_anterior';
-    $stmtM = $pdo->prepare("SELECT item_id, mesa_id, substituto_item_id FROM manutencoes WHERE id = ? AND status_manutencao = 'Aberto'");
-    $stmtM->execute([$manutencao_id]);
-    $registro = $stmtM->fetch();
-    if (!$registro) {
-        die('Manutenção não encontrada ou já concluída.');
-    }
-
     $pdo->beginTransaction();
     try {
+        $stmtM = $pdo->prepare("SELECT item_id, mesa_id, substituto_item_id, substituto_mesa_origem_id FROM manutencoes WHERE id = ? AND status_manutencao = 'Aberto' FOR UPDATE");
+        $stmtM->execute([$manutencao_id]);
+        $registro = $stmtM->fetch();
+        if (!$registro) {
+            throw new RuntimeException('Manutenção não encontrada ou já concluída.');
+        }
+
+        $idsBloqueio = [(int) $registro['item_id']];
+        if (!empty($registro['substituto_item_id'])) $idsBloqueio[] = (int) $registro['substituto_item_id'];
+        sort($idsBloqueio);
+        $marcadores = implode(',', array_fill(0, count($idsBloqueio), '?'));
+        $stmtItens = $pdo->prepare("SELECT id FROM itens WHERE id IN ({$marcadores}) FOR UPDATE");
+        $stmtItens->execute($idsBloqueio);
+
         if (!empty($registro['substituto_item_id'])) {
             if ($decisao === 'manter_atual') {
                 $stmt = $pdo->prepare("UPDATE itens SET status = 'Ativo', mesa_id = NULL WHERE id = ?");
@@ -305,13 +374,23 @@ if ($acao == 'concluir_manutencao') {
                 $stmt = $pdo->prepare("UPDATE itens SET status = 'Ativo', mesa_id = ? WHERE id = ?");
                 $stmt->execute([$registro['mesa_id'], $registro['item_id']]);
 
-                $stmt = $pdo->prepare("UPDATE itens SET mesa_id = NULL WHERE id = ?");
-                $stmt->execute([$registro['substituto_item_id']]);
+                $stmt = $pdo->prepare("UPDATE itens SET mesa_id = ? WHERE id = ?");
+                $stmt->execute([$registro['substituto_mesa_origem_id'], $registro['substituto_item_id']]);
+                $destino_substituto = empty($registro['substituto_mesa_origem_id'])
+                    ? 'voltou aos itens avulsos'
+                    : "retornou à mesa #{$registro['substituto_mesa_origem_id']}";
                 registrarLog(
                     $pdo,
                     $registro['mesa_id'],
-                    "Manutenção concluída: equipamento anterior #{$registro['item_id']} retornou à mesa e o equipamento temporário #{$registro['substituto_item_id']} voltou aos itens avulsos."
+                    "Manutenção concluída: equipamento anterior #{$registro['item_id']} retornou à mesa e o equipamento temporário #{$registro['substituto_item_id']} {$destino_substituto}."
                 );
+                if (!empty($registro['substituto_mesa_origem_id'])) {
+                    registrarLog(
+                        $pdo,
+                        $registro['substituto_mesa_origem_id'],
+                        "Equipamento #{$registro['substituto_item_id']} retornou após uso temporário em outra mesa."
+                    );
+                }
             }
         } else {
             $stmt = $pdo->prepare("UPDATE itens SET status = 'Ativo' WHERE id = ?");

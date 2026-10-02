@@ -12,13 +12,25 @@ $stmt_m = $pdo->prepare("SELECT * FROM manutencoes WHERE item_id = ? AND status_
 $stmt_m->execute([$item_id]);
 $manutencao = $stmt_m->fetch();
 
-$stmt_avulsos = $pdo->query("
-    SELECT id, tipo, nome_personalizado, patrimonio_protocolo
-    FROM itens
-    WHERE mesa_id IS NULL AND status = 'Ativo'
-    ORDER BY tipo, patrimonio_protocolo
+$stmt_substitutos = $pdo->prepare("
+    SELECT i.id, i.tipo, i.nome_personalizado, i.patrimonio_protocolo,
+           i.mesa_id, m.nome AS mesa_nome
+    FROM itens i
+    LEFT JOIN mesas m ON m.id = i.mesa_id AND m.status = 'ativo'
+    WHERE i.id <> ?
+      AND i.status = 'Ativo'
+      AND (i.mesa_id IS NULL OR i.mesa_id <> ?)
+      AND (i.mesa_id IS NULL OR m.id IS NOT NULL)
+      AND NOT EXISTS (
+          SELECT 1
+          FROM manutencoes mt
+          WHERE mt.substituto_item_id = i.id
+            AND mt.status_manutencao = 'Aberto'
+      )
+    ORDER BY (i.mesa_id IS NULL) DESC, m.nome, i.tipo, i.patrimonio_protocolo
 ");
-$itens_avulsos = $stmt_avulsos->fetchAll();
+$stmt_substitutos->execute([$item_id, $item['mesa_id'] ?? 0]);
+$itens_substitutos = $stmt_substitutos->fetchAll();
 
 $anexos = [];
 $substituto = null;
@@ -73,21 +85,22 @@ if ($manutencao) {
                                         class="form-select rounded-3 border-2"
                                         onchange="alternarIpSubstituto()">
                                     <option value="">Não usar substituto</option>
-                                    <?php foreach ($itens_avulsos as $avulso): ?>
-                                        <option value="<?= $avulso['id'] ?>">
-                                            <?= htmlspecialchars($avulso['tipo'] === 'Outros' ? $avulso['nome_personalizado'] : $avulso['tipo']) ?>
-                                            — <?= htmlspecialchars($avulso['patrimonio_protocolo']) ?>
+                                    <?php foreach ($itens_substitutos as $substituto_opcao): ?>
+                                        <option value="<?= (int) $substituto_opcao['id'] ?>">
+                                            <?= htmlspecialchars($substituto_opcao['tipo'] === 'Outros' ? $substituto_opcao['nome_personalizado'] : $substituto_opcao['tipo']) ?>
+                                            — <?= htmlspecialchars($substituto_opcao['patrimonio_protocolo']) ?>
+                                            (<?= empty($substituto_opcao['mesa_id']) ? 'Avulso' : 'Em uso na ' . htmlspecialchars($substituto_opcao['mesa_nome']) ?>)
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
-                                <div class="form-text">O item avulso aparecerá nesta mesa até a manutenção ser concluída.</div>
+                                <div class="form-text">Você pode usar um item avulso ou transferir temporariamente um equipamento de outra mesa. A origem fica registrada para permitir a devolução segura ao concluir.</div>
                             </div>
                             <div class="mb-4">
                                 <label class="form-label fw-bold text-dark">IP do equipamento substituto (opcional):</label>
                                 <input type="text" name="substituto_ip_maquina" id="substituto_ip_maquina"
                                        class="form-control rounded-3 border-2"
                                        placeholder="Ex.: 172.17.16.45" disabled>
-                                <div class="form-text">Se não informar, o IP já cadastrado no item avulso será mantido.</div>
+                                <div class="form-text">Se não informar, o IP já cadastrado no equipamento será mantido.</div>
                             </div>
                         <?php endif; ?>
                         <div class="mb-4">

@@ -1,6 +1,9 @@
-/* Interface do inventário: sem fontes ou bibliotecas de ícones externas. */
-:root{--cm-ink:#202e44;--cm-muted:#66758a;--cm-blue:#295edb;--cm-line:#e3e9f1;--cm-bg:#f4f6fa;--cm-radius:14px}
-body{background-color:var(--cm-bg);padding-top:0;color:var(--cm-ink);font-family:Inter,"Segoe UI",Arial,sans-serif}
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap');
+
+/* Interface do inventário. */
+:root{--cm-font:"Roboto",Arial,sans-serif;--bs-body-font-family:var(--cm-font);--cm-ink:#202e44;--cm-muted:#66758a;--cm-blue:#295edb;--cm-line:#e3e9f1;--cm-bg:#f4f6fa;--cm-radius:14px}
+body{background-color:var(--cm-bg);padding-top:0;color:var(--cm-ink);font-family:var(--cm-font)}
+button,input,select,textarea,.btn,.form-control,.form-select{font-family:var(--cm-font)}
 body.cm-app{background:var(--cm-bg)!important}
 .cm-icon{display:inline-block;vertical-align:middle;flex-shrink:0}
 .app-header{background:#fff;border-bottom:1px solid var(--cm-line)}

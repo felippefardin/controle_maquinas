@@ -59,7 +59,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     }
 }
 ?>
-<!doctype html><html lang="pt-br"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Recuperar senha</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"></head>
+<!doctype html><html lang="pt-br"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Recuperar senha</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"><link rel="stylesheet" href="style.css?v=<?= (int) filemtime(__DIR__ . '/style.css') ?>"></head>
 <body class="bg-light d-flex align-items-center min-vh-100"><main class="container" style="max-width:480px"><div class="card border-0 shadow rounded-4"><div class="card-body p-4 p-md-5"><h1 class="h3 fw-bold">Recuperar senha</h1>
 <?php if ($erro): ?><div class="alert alert-danger"><?= e($erro) ?></div><?php endif; ?><?php if ($sucesso): ?><div class="alert alert-success"><?= e($sucesso) ?></div><?php endif; ?>
 <?php if ($etapa === 'concluido'): ?><a href="login.php" class="btn btn-primary w-100">Voltar ao login</a>
