@@ -34,6 +34,8 @@ $itens_substitutos = $stmt_substitutos->fetchAll();
 
 $anexos = [];
 $substituto = null;
+$mesa_origem_substituto = null;
+$itens_reposicao = [];
 if ($manutencao) {
     $stmt_a = $pdo->prepare("SELECT * FROM manutencao_anexos WHERE manutencao_id = ? ORDER BY data_upload DESC, id DESC");
     $stmt_a->execute([$manutencao['id']]);
@@ -43,6 +45,24 @@ if ($manutencao) {
         $stmt_s = $pdo->prepare("SELECT * FROM itens WHERE id = ?");
         $stmt_s->execute([$manutencao['substituto_item_id']]);
         $substituto = $stmt_s->fetch();
+
+        if (!empty($manutencao['substituto_mesa_origem_id'])) {
+            $stmt_mesa_origem = $pdo->prepare("SELECT id, nome FROM mesas WHERE id = ?");
+            $stmt_mesa_origem->execute([$manutencao['substituto_mesa_origem_id']]);
+            $mesa_origem_substituto = $stmt_mesa_origem->fetch();
+
+            $stmt_reposicao = $pdo->prepare("
+                SELECT id, tipo, nome_personalizado, patrimonio_protocolo
+                FROM itens
+                WHERE mesa_id IS NULL
+                  AND status = 'Ativo'
+                  AND tipo = ?
+                  AND id <> ?
+                ORDER BY tipo, patrimonio_protocolo
+            ");
+            $stmt_reposicao->execute([$item['tipo'], $manutencao['substituto_item_id']]);
+            $itens_reposicao = $stmt_reposicao->fetchAll();
+        }
     }
 }
 ?>
@@ -181,18 +201,38 @@ if ($manutencao) {
                                 <h6 class="fw-bold mb-2">Ao concluir, qual equipamento deve permanecer na mesa?</h6>
                                 <p class="small mb-0">Escolha entre permanecer com o equipamento atual ou retornar com o equipamento anterior.</p>
                             </div>
+                            <?php if ($mesa_origem_substituto): ?>
+                                <div id="bloco-reposicao-origem" class="alert alert-warning border-0 rounded-3 mt-3" hidden>
+                                    <label for="reposicao_mesa_origem_item_id" class="form-label fw-bold">
+                                        Qual máquina substituirá na <?= htmlspecialchars($mesa_origem_substituto['nome']) ?>, que ficou vazia?
+                                    </label>
+                                    <select name="reposicao_mesa_origem_item_id" id="reposicao_mesa_origem_item_id" class="form-select">
+                                        <option value="">Selecione a máquina de reposição</option>
+                                        <option value="<?= (int) $item['id'] ?>">
+                                            Máquina que voltou da manutenção — <?= htmlspecialchars($item['patrimonio_protocolo']) ?>
+                                        </option>
+                                        <?php foreach ($itens_reposicao as $item_reposicao): ?>
+                                            <option value="<?= (int) $item_reposicao['id'] ?>">
+                                                <?= htmlspecialchars($item_reposicao['tipo'] === 'Outros' ? $item_reposicao['nome_personalizado'] : $item_reposicao['tipo']) ?>
+                                                — <?= htmlspecialchars($item_reposicao['patrimonio_protocolo']) ?> (avulso)
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <div class="form-text">Esta escolha é obrigatória quando o equipamento atual permanecer na mesa.</div>
+                                </div>
+                            <?php endif; ?>
                             <div class="row g-2">
                                 <div class="col-md-6">
                                     <button type="submit" name="decisao" value="manter_atual"
                                             class="btn btn-primary w-100 py-3 rounded-3 shadow-sm"
-                                            onclick="return confirm('Confirmar que o equipamento atual permanecerá na mesa?')">
+                                            onclick="return confirmarConclusao('manter_atual')">
                                         Permanecer com o atual
                                     </button>
                                 </div>
                                 <div class="col-md-6">
                                     <button type="submit" name="decisao" value="retornar_anterior"
                                             class="btn btn-success w-100 py-3 rounded-3 shadow-sm"
-                                            onclick="return confirm('Confirmar o retorno do equipamento anterior para a mesa?')">
+                                            onclick="return confirmarConclusao('retornar_anterior')">
                                         Retornar equipamento anterior
                                     </button>
                                 </div>
@@ -219,6 +259,26 @@ function alternarIpSubstituto() {
 
     campoIp.disabled = seletor.value === '';
     if (campoIp.disabled) campoIp.value = '';
+}
+
+function confirmarConclusao(decisao) {
+    const bloco = document.getElementById('bloco-reposicao-origem');
+    const reposicao = document.getElementById('reposicao_mesa_origem_item_id');
+
+    if (bloco && reposicao) {
+        const manterAtual = decisao === 'manter_atual';
+        bloco.hidden = !manterAtual;
+        reposicao.required = manterAtual;
+        if (manterAtual && reposicao.value === '') {
+            reposicao.focus();
+            reposicao.reportValidity();
+            return false;
+        }
+    }
+
+    return decisao === 'manter_atual'
+        ? confirm('Confirmar que o equipamento atual permanecerá na mesa e registrar a reposição da mesa que ficou vazia?')
+        : confirm('Confirmar o retorno do equipamento anterior para a mesa?');
 }
 </script>
 

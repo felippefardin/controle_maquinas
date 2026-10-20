@@ -3,17 +3,120 @@ include 'config.php';
 $acao = isset($_GET['acao']) ? $_GET['acao'] : '';
 exigirPostComCsrf();
 
+function exibirConflitoPatrimonio(PDO $pdo, array $existente, ?int $mesaDestinoId): never {
+    $mesaDestino = null;
+    if ($mesaDestinoId !== null) {
+        $stmtDestino = $pdo->prepare("SELECT id, nome FROM mesas WHERE id = ? AND status = 'ativo'");
+        $stmtDestino->execute([$mesaDestinoId]);
+        $mesaDestino = $stmtDestino->fetch();
+    }
+
+    if ($existente['status'] === 'Manutenção') {
+        $localAtual = 'Em manutenção' . (!empty($existente['mesa_nome']) ? ' — origem: ' . $existente['mesa_nome'] : '');
+    } elseif (!empty($existente['mesa_id'])) {
+        $prefixoMesa = match ($existente['mesa_status'] ?? 'ativo') {
+            'arquivado' => 'Mesa arquivada (registro oculto): ',
+            'deletado' => 'Mesa excluída (registro oculto): ',
+            default => 'Mesa: ',
+        };
+        $localAtual = $prefixoMesa . ($existente['mesa_nome'] ?? '#' . $existente['mesa_id']);
+    } else {
+        $localAtual = 'Itens avulsos';
+    }
+
+    $localDestino = $mesaDestino ? 'Mesa: ' . $mesaDestino['nome'] : 'Itens avulsos';
+    $mesmoLocal = ($mesaDestinoId === null && empty($existente['mesa_id']))
+        || ($mesaDestinoId !== null && (int) $existente['mesa_id'] === $mesaDestinoId);
+    $podeTransferir = $existente['status'] === 'Ativo' && !$mesmoLocal;
+    $urlCancelar = $mesaDestinoId !== null
+        ? 'gerenciar_itens.php?mesa_id=' . $mesaDestinoId
+        : 'itens_avulsos.php';
+    $nomeItem = $existente['tipo'] === 'Outros' && !empty($existente['nome_personalizado'])
+        ? $existente['nome_personalizado']
+        : $existente['tipo'];
+
+    http_response_code(409);
+    ?>
+    <!DOCTYPE html>
+    <html lang="pt-br">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Registro já existente</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body class="bg-light">
+    <main class="container py-5">
+        <div class="card border-warning shadow-sm mx-auto" style="max-width: 720px">
+            <div class="card-header bg-warning-subtle py-3 px-4">
+                <h1 class="h4 mb-0">Este patrimônio já está cadastrado</h1>
+            </div>
+            <div class="card-body p-4">
+                <p class="mb-4">Nenhum dado foi alterado. Confira onde está o registro antes de decidir.</p>
+                <dl class="row mb-4">
+                    <dt class="col-sm-4">Equipamento</dt><dd class="col-sm-8"><?= e($nomeItem) ?></dd>
+                    <dt class="col-sm-4">Patrimônio / protocolo</dt><dd class="col-sm-8"><strong><?= e($existente['patrimonio_protocolo']) ?></strong></dd>
+                    <dt class="col-sm-4">Local atual</dt><dd class="col-sm-8"><span class="badge text-bg-info"><?= e($localAtual) ?></span></dd>
+                    <dt class="col-sm-4">Destino solicitado</dt><dd class="col-sm-8"><span class="badge text-bg-primary"><?= e($localDestino) ?></span></dd>
+                    <dt class="col-sm-4">Situação</dt><dd class="col-sm-8"><?= e($existente['status']) ?></dd>
+                </dl>
+
+                <?php if ($podeTransferir): ?>
+                    <div class="alert alert-warning">
+                        <?php if (in_array($existente['mesa_status'] ?? '', ['arquivado', 'deletado'], true)): ?>
+                            O patrimônio continua guardado em uma mesa que não aparece no painel. Confirme para recuperar esse registro e transferi-lo ao destino solicitado.
+                        <?php else: ?>
+                            Se confirmar, o cadastro existente será transferido para o destino solicitado.
+                        <?php endif; ?>
+                        Não será criada uma cópia.
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <form action="acoes.php?acao=confirmar_transferencia_duplicado" method="POST">
+                            <?= csrfField() ?>
+                            <input type="hidden" name="item_id" value="<?= (int) $existente['id'] ?>">
+                            <input type="hidden" name="mesa_destino_id" value="<?= $mesaDestinoId ?? '' ?>">
+                            <button type="submit" class="btn btn-warning" onclick="return confirm('Confirmar a recuperação e transferência do registro existente?')">Recuperar e transferir registro existente</button>
+                        </form>
+                        <a href="<?= e($urlCancelar) ?>" class="btn btn-outline-secondary">Cancelar, não alterar</a>
+                    </div>
+                <?php else: ?>
+                    <div class="alert alert-info">
+                        <?= $existente['status'] === 'Manutenção'
+                            ? 'O equipamento está em manutenção e não pode ser transferido agora.'
+                            : 'O equipamento já está no destino solicitado; não é necessário cadastrá-lo novamente.' ?>
+                    </div>
+                    <a href="<?= e($urlCancelar) ?>" class="btn btn-primary">Voltar sem alterar</a>
+                <?php endif; ?>
+            </div>
+        </div>
+    </main>
+    </body>
+    </html>
+    <?php
+    exit;
+}
+
 // --- CORREÇÃO NA CRIAÇÃO DE MESA ---
 if ($acao == 'criar_mesa') {
     $nome = textoObrigatorio($_POST['identificacao'] ?? '', 'Identificação');
     
     $ip_mesa = ipOpcional($_POST['ip_mesa'] ?? '') ?: '0.0.0.0';
 
-    $stmt = $pdo->prepare("INSERT INTO mesas (nome, ip_mesa, status) VALUES (?, ?, 'ativo')");
-    $stmt->execute([$nome, $ip_mesa]);
-    
-    $mesa_id = $pdo->lastInsertId();
-    registrarLog($pdo, $mesa_id, "Mesa criada: {$nome} com IP: {$ip_mesa}");
+    $pdo->beginTransaction();
+    try {
+        $stmt = $pdo->prepare("INSERT INTO mesas (nome, ip_mesa, status) VALUES (?, ?, 'ativo')");
+        $stmt->execute([$nome, $ip_mesa]);
+        $mesa_id = (int) $pdo->lastInsertId();
+        $agora = date('Y-m-d H:i:s');
+        iniciarPeriodoMesa($pdo, $mesa_id, 'ocupada', $nome, $agora);
+        registrarLog($pdo, $mesa_id, "Mesa criada e ocupada por {$nome} com IP: {$ip_mesa}");
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        http_response_code(422);
+        exit('Não foi possível criar a mesa: ' . e($e->getMessage()));
+    }
     
     header("Location: index.php");
     exit;
@@ -24,29 +127,123 @@ if ($acao == 'editar_mesa') {
     $id = inteiroPositivo($_POST['id'] ?? null);
     $novo_nome = textoObrigatorio($_POST['nome'] ?? '', 'Nome');
 
-    // 1. Atualiza o nome da mesa no banco
-    $stmt = $pdo->prepare("UPDATE mesas SET nome = ? WHERE id = ?");
-    $stmt->execute([$novo_nome, $id]);
-
-    // 2. Registra a alteração no histórico usando a função correta do sistema
-    registrarLog($pdo, $id, "Nome da mesa alterado para: " . $novo_nome);
+    $pdo->beginTransaction();
+    try {
+        buscarMesaAtiva($pdo, $id, true);
+        $agora = date('Y-m-d H:i:s');
+        encerrarPeriodoMesa($pdo, $id, $agora);
+        iniciarPeriodoMesa($pdo, $id, 'ocupada', $novo_nome, $agora);
+        $stmt = $pdo->prepare("UPDATE mesas SET nome = ? WHERE id = ?");
+        $stmt->execute([$novo_nome, $id]);
+        registrarLog($pdo, $id, "Mesa ocupada por {$novo_nome}. Período iniciado em " . date('d/m/Y H:i', strtotime($agora)) . '.');
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        http_response_code(422);
+        exit('Não foi possível registrar a ocupação: ' . e($e->getMessage()));
+    }
 
     header("Location: index.php");
     exit;
 }
 
+if ($acao == 'desocupar_mesa') {
+    $id = inteiroPositivo($_POST['id'] ?? null);
+    try {
+        $saida = dataHoraInformada($_POST['data_saida'] ?? '', 'Data da saída');
+        $pdo->beginTransaction();
+        $mesa = buscarMesaAtiva($pdo, $id, true);
+        if (strcasecmp(trim($mesa['nome']), 'Mesa vazia') === 0) {
+            throw new RuntimeException('Esta mesa já está vazia.');
+        }
+        encerrarPeriodoMesa($pdo, $id, $saida);
+        iniciarPeriodoMesa($pdo, $id, 'vazia', null, $saida);
+        $stmt = $pdo->prepare("UPDATE mesas SET nome = 'Mesa vazia' WHERE id = ?");
+        $stmt->execute([$id]);
+        registrarLog($pdo, $id, "Servidor {$mesa['nome']} saiu em " . date('d/m/Y H:i', strtotime($saida)) . '. A mesa ficou vazia a partir desta data.');
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        http_response_code(422);
+        exit('Não foi possível desocupar a mesa: ' . e($e->getMessage()));
+    }
+
+    header('Location: index.php');
+    exit;
+}
+
 if ($acao == 'deletar_mesa') {
     $id = inteiroPositivo($_POST['id'] ?? null);
-    $stmt = $pdo->prepare("UPDATE mesas SET status = 'deletado' WHERE id = ?");
-    $stmt->execute([$id]);
-    
-    registrarLog($pdo, $id, "Mesa excluída do sistema.");
+    $pdo->beginTransaction();
+    try {
+        $mesa = buscarMesaAtiva($pdo, $id, true);
+        $stmtContagem = $pdo->prepare("SELECT COUNT(*) FROM itens WHERE mesa_id = ?");
+        $stmtContagem->execute([$id]);
+        $quantidadeLiberada = (int) $stmtContagem->fetchColumn();
+
+        registrarLog($pdo, $id, "Mesa excluída do sistema. {$quantidadeLiberada} equipamento(s) foram liberados para Itens avulsos.");
+        $stmtItens = $pdo->prepare("UPDATE itens SET mesa_id = NULL WHERE mesa_id = ?");
+        $stmtItens->execute([$id]);
+        $stmt = $pdo->prepare("UPDATE mesas SET status = 'deletado' WHERE id = ?");
+        $stmt->execute([$id]);
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        http_response_code(422);
+        exit('Não foi possível excluir a mesa: ' . e($e->getMessage()));
+    }
     
     header("Location: index.php");
     exit;
 }
 
 // --- ITENS ---
+if ($acao == 'confirmar_transferencia_duplicado') {
+    $itemId = inteiroPositivo($_POST['item_id'] ?? null);
+    $mesaDestinoId = !empty($_POST['mesa_destino_id']) ? inteiroPositivo($_POST['mesa_destino_id']) : null;
+
+    $pdo->beginTransaction();
+    try {
+        $stmt = $pdo->prepare("
+            SELECT i.id, i.mesa_id, i.tipo, i.nome_personalizado, i.patrimonio_protocolo, i.status,
+                   m.nome AS mesa_nome, m.status AS mesa_status
+            FROM itens i
+            LEFT JOIN mesas m ON m.id = i.mesa_id
+            WHERE i.id = ?
+            FOR UPDATE
+        ");
+        $stmt->execute([$itemId]);
+        $item = $stmt->fetch();
+        if (!$item) throw new RuntimeException('O registro existente não foi encontrado.');
+        if ($item['status'] !== 'Ativo') throw new RuntimeException('O equipamento não pode ser transferido enquanto estiver em manutenção.');
+
+        $mesaOrigemId = !empty($item['mesa_id']) ? (int) $item['mesa_id'] : null;
+        $mesaDestino = $mesaDestinoId !== null ? buscarMesaAtiva($pdo, $mesaDestinoId, true) : null;
+        if ($mesaOrigemId === $mesaDestinoId) throw new RuntimeException('O equipamento já está no destino solicitado.');
+
+        $stmtUpdate = $pdo->prepare('UPDATE itens SET mesa_id = ? WHERE id = ?');
+        $stmtUpdate->execute([$mesaDestinoId, $itemId]);
+
+        $nomeItem = $item['tipo'] === 'Outros' && !empty($item['nome_personalizado']) ? $item['nome_personalizado'] : $item['tipo'];
+        $destinoTexto = $mesaDestino ? "mesa {$mesaDestino['nome']}" : 'itens avulsos';
+        $origemTexto = $mesaOrigemId ? 'mesa ' . ($item['mesa_nome'] ?? '#' . $mesaOrigemId) : 'itens avulsos';
+        if ($mesaOrigemId) {
+            registrarLog($pdo, $mesaOrigemId, "Registro existente transferido: {$nomeItem}, patrimônio {$item['patrimonio_protocolo']}, saiu para {$destinoTexto} após confirmação de duplicidade.");
+        }
+        if ($mesaDestinoId) {
+            registrarLog($pdo, $mesaDestinoId, "Registro existente recebido: {$nomeItem}, patrimônio {$item['patrimonio_protocolo']}, veio de {$origemTexto} após confirmação de duplicidade.");
+        }
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        http_response_code(422);
+        exit('Não foi possível transferir o registro: ' . e($e->getMessage()));
+    }
+
+    header('Location: ' . ($mesaDestinoId === null ? 'itens_avulsos.php' : 'index.php'));
+    exit;
+}
+
 if ($acao == 'adicionar_item') {
     $mesa_id = (!empty($_POST['mesa_id']) && $_POST['mesa_id'] != '0') ? inteiroPositivo($_POST['mesa_id']) : null;
     $origemItem = (string) ($_POST['origem_item'] ?? 'novo');
@@ -84,9 +281,18 @@ if ($acao == 'adicionar_item') {
     $tipo = (string) ($_POST['tipo'] ?? '');
     if (!in_array($tipo, ['Tela', 'CPU', 'Outros'], true)) exit('Tipo de equipamento inválido.');
     $patrimonio = textoObrigatorio($_POST['patrimonio'] ?? '', 'Patrimônio');
-    if (!patrimonioDisponivel($pdo, $patrimonio)) {
-        http_response_code(409);
-        exit('Já existe um equipamento com este patrimônio/protocolo.');
+    $stmtExistente = $pdo->prepare("
+        SELECT i.id, i.mesa_id, i.tipo, i.nome_personalizado, i.patrimonio_protocolo, i.status,
+               m.nome AS mesa_nome, m.status AS mesa_status
+        FROM itens i
+        LEFT JOIN mesas m ON m.id = i.mesa_id
+        WHERE i.patrimonio_protocolo = ?
+        LIMIT 1
+    ");
+    $stmtExistente->execute([$patrimonio]);
+    $registroExistente = $stmtExistente->fetch();
+    if ($registroExistente) {
+        exibirConflitoPatrimonio($pdo, $registroExistente, $mesa_id);
     }
     $ip = ipOpcional($_POST['ip_maquina'] ?? '');
 
@@ -212,7 +418,13 @@ if ($acao == 'iniciar_manutencao') {
 
     $pdo->beginTransaction();
     try {
-        $stmtI = $pdo->prepare("SELECT mesa_id, status FROM itens WHERE id = ? FOR UPDATE");
+        $stmtI = $pdo->prepare("
+            SELECT i.mesa_id, i.status, m.nome AS mesa_nome
+            FROM itens i
+            LEFT JOIN mesas m ON m.id = i.mesa_id
+            WHERE i.id = ?
+            FOR UPDATE
+        ");
         $stmtI->execute([$item_id]);
         $item = $stmtI->fetch();
         if (!$item) {
@@ -286,7 +498,7 @@ if ($acao == 'iniciar_manutencao') {
                 registrarLog(
                     $pdo,
                     $substituto['mesa_id'],
-                    "Equipamento {$nome_substituto}, patrimônio {$substituto['patrimonio_protocolo']}, transferido temporariamente para a mesa #{$item['mesa_id']} durante manutenção."
+                    "Mesa temporariamente vazia: o equipamento {$nome_substituto}, patrimônio {$substituto['patrimonio_protocolo']}, foi transferido para a mesa {$item['mesa_nome']} para substituir uma máquina em manutenção."
                 );
             }
         }
@@ -345,6 +557,10 @@ if ($acao == 'trocar_itens') {
 if ($acao == 'concluir_manutencao') {
     $manutencao_id = (int) $_POST['manutencao_id'];
     $decisao = $_POST['decisao'] ?? 'retornar_anterior';
+    if (!in_array($decisao, ['manter_atual', 'retornar_anterior'], true)) {
+        http_response_code(422);
+        exit('Decisão de retorno inválida.');
+    }
     $pdo->beginTransaction();
     try {
         $stmtM = $pdo->prepare("SELECT item_id, mesa_id, substituto_item_id, substituto_mesa_origem_id FROM manutencoes WHERE id = ? AND status_manutencao = 'Aberto' FOR UPDATE");
@@ -354,21 +570,66 @@ if ($acao == 'concluir_manutencao') {
             throw new RuntimeException('Manutenção não encontrada ou já concluída.');
         }
 
+        $reposicaoId = null;
+        if ($decisao === 'manter_atual' && !empty($registro['substituto_mesa_origem_id'])) {
+            $reposicaoId = inteiroPositivo($_POST['reposicao_mesa_origem_item_id'] ?? null);
+        }
+
         $idsBloqueio = [(int) $registro['item_id']];
         if (!empty($registro['substituto_item_id'])) $idsBloqueio[] = (int) $registro['substituto_item_id'];
+        if ($reposicaoId !== null) $idsBloqueio[] = $reposicaoId;
+        $idsBloqueio = array_values(array_unique($idsBloqueio));
         sort($idsBloqueio);
         $marcadores = implode(',', array_fill(0, count($idsBloqueio), '?'));
-        $stmtItens = $pdo->prepare("SELECT id FROM itens WHERE id IN ({$marcadores}) FOR UPDATE");
+        $stmtItens = $pdo->prepare("SELECT id, mesa_id, tipo, nome_personalizado, patrimonio_protocolo, status FROM itens WHERE id IN ({$marcadores}) FOR UPDATE");
         $stmtItens->execute($idsBloqueio);
+        $itensPorId = [];
+        foreach ($stmtItens->fetchAll() as $itemBloqueado) {
+            $itensPorId[(int) $itemBloqueado['id']] = $itemBloqueado;
+        }
+        if (count($itensPorId) !== count($idsBloqueio)) {
+            throw new RuntimeException('Um dos equipamentos envolvidos não foi encontrado.');
+        }
+
+        $itemAnterior = $itensPorId[(int) $registro['item_id']];
+        $itemSubstituto = !empty($registro['substituto_item_id'])
+            ? $itensPorId[(int) $registro['substituto_item_id']]
+            : null;
 
         if (!empty($registro['substituto_item_id'])) {
             if ($decisao === 'manter_atual') {
                 $stmt = $pdo->prepare("UPDATE itens SET status = 'Ativo', mesa_id = NULL WHERE id = ?");
                 $stmt->execute([$registro['item_id']]);
+
+                $mensagemReposicao = 'A mesa de origem não precisava de reposição.';
+                if (!empty($registro['substituto_mesa_origem_id'])) {
+                    $itemReposicao = $itensPorId[$reposicaoId];
+                    $reposicaoEhAnterior = $reposicaoId === (int) $registro['item_id'];
+                    if (!$reposicaoEhAnterior) {
+                        if ($itemReposicao['status'] !== 'Ativo' || !empty($itemReposicao['mesa_id'])) {
+                            throw new RuntimeException('A máquina escolhida para reposição não está mais disponível como item avulso.');
+                        }
+                        if ($itemReposicao['tipo'] !== $itemAnterior['tipo']) {
+                            throw new RuntimeException('A reposição da mesa vazia deve ser uma máquina do mesmo tipo.');
+                        }
+                    }
+
+                    $stmt = $pdo->prepare("UPDATE itens SET status = 'Ativo', mesa_id = ? WHERE id = ?");
+                    $stmt->execute([$registro['substituto_mesa_origem_id'], $reposicaoId]);
+                    $nomeReposicao = $itemReposicao['tipo'] === 'Outros'
+                        ? $itemReposicao['nome_personalizado']
+                        : $itemReposicao['tipo'];
+                    $mensagemReposicao = "A mesa que estava vazia recebeu {$nomeReposicao}, patrimônio {$itemReposicao['patrimonio_protocolo']}.";
+                    registrarLog(
+                        $pdo,
+                        $registro['substituto_mesa_origem_id'],
+                        "Reposição após manutenção: {$nomeReposicao}, patrimônio {$itemReposicao['patrimonio_protocolo']}, passou a ocupar a mesa. O equipamento emprestado #{$registro['substituto_item_id']} permaneceu na outra mesa."
+                    );
+                }
                 registrarLog(
                     $pdo,
                     $registro['mesa_id'],
-                    "Manutenção concluída: equipamento atual #{$registro['substituto_item_id']} permaneceu na mesa e o equipamento anterior #{$registro['item_id']} foi enviado aos itens avulsos."
+                    "Manutenção concluída: equipamento atual #{$registro['substituto_item_id']} permaneceu na mesa. {$mensagemReposicao}"
                 );
             } else {
                 $stmt = $pdo->prepare("UPDATE itens SET status = 'Ativo', mesa_id = ? WHERE id = ?");

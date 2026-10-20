@@ -1,0 +1,21 @@
+AJUSTE: selecionar máquina em uso em outra mesa na manutenção
+
+1. Faça uma cópia de segurança do projeto e do banco.
+2. Copie config.php, manutencao.php e acoes.php para:
+   C:\xampp\htdocs\controle_maquinas
+3. Execute a migração uma única vez:
+   C:\xampp\php\php.exe C:\xampp\htdocs\controle_maquinas\migrate.php
+4. Abra a página de manutenção e confira o campo "Equipamento substituto".
+
+O que mudou:
+- o seletor agora inclui itens avulsos e máquinas em uso em outras mesas;
+- a mesa de origem do substituto é registrada;
+- ao concluir e retornar o equipamento anterior, o substituto volta à mesa de origem;
+- as operações críticas usam transação e bloqueio dos registros;
+- máquinas já usadas como substitutas em outra manutenção aberta não são oferecidas.
+
+Arquivos incluídos:
+- config.php
+- manutencao.php
+- acoes.php
+- migrate.php

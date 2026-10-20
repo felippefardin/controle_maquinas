@@ -1,0 +1,19 @@
+AJUSTE DE PATRIMÔNIO / PROTOCOLO DUPLICADO
+
+Ao tentar cadastrar um equipamento cujo patrimônio/protocolo já existe, o
+sistema agora informa:
+
+- qual é o equipamento existente;
+- em qual mesa ele está ou se está nos itens avulsos;
+- se está em manutenção;
+- qual era o destino solicitado no novo cadastro.
+
+Quando o equipamento está ativo e em outro local, o usuário pode escolher:
+
+- Trocar / transferir o registro existente para o destino solicitado; ou
+- Cancelar sem alterar nenhuma informação.
+
+Não é criada uma cópia do patrimônio. A transferência confirmada é registrada
+no histórico da mesa de origem e da mesa de destino.
+
+Equipamentos em manutenção não podem ser transferidos por essa confirmação.

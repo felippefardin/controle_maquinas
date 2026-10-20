@@ -1,0 +1,19 @@
+CORREÇÃO DE PATRIMÔNIOS PRESOS EM MESAS ARQUIVADAS
+
+Causa encontrada no banco atual:
+- Existem equipamentos ativos vinculados a mesas arquivadas.
+- A mesa some do painel, mas o equipamento e seu patrimônio continuam no banco.
+- Por isso, o sistema corretamente identifica o patrimônio como existente.
+
+Comportamento corrigido:
+- O aviso identifica claramente quando o registro está em uma mesa arquivada
+  ou excluída e informa que se trata de um registro oculto.
+- O botão "Recuperar e transferir registro existente" move o equipamento para
+  a nova mesa ou para Itens avulsos, sem criar patrimônio duplicado.
+- A movimentação continua sendo registrada no histórico.
+- Nas próximas exclusões definitivas de mesa, os equipamentos vinculados são
+  automaticamente liberados para Itens avulsos antes de a mesa ser excluída.
+
+Observação:
+- Arquivar uma mesa continua preservando seus equipamentos nela. Ao tentar
+  usar novamente um desses patrimônios, o sistema oferece a recuperação.

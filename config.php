@@ -219,6 +219,56 @@ function registrarLog($pdo, $mesa_id, $mensagem) {
     $stmt->execute([$mesa_id, "[Usuário: {$usuario}] {$mensagem}"]);
 }
 
+function garantirEstruturaOcupacao(PDO $pdo): void {
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS mesa_ocupacoes (
+            id INT NOT NULL AUTO_INCREMENT,
+            mesa_id INT NOT NULL,
+            situacao ENUM('ocupada', 'vazia') NOT NULL,
+            servidor VARCHAR(255) NULL,
+            inicio DATETIME NOT NULL,
+            fim DATETIME NULL,
+            usuario_registro VARCHAR(80) NULL,
+            PRIMARY KEY (id),
+            INDEX idx_mesa_ocupacoes_periodo (mesa_id, inicio, fim)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+}
+
+function dataHoraInformada(mixed $valor, string $campo): string {
+    $texto = trim((string) $valor);
+    $data = DateTimeImmutable::createFromFormat('!Y-m-d\TH:i', $texto, new DateTimeZone('America/Sao_Paulo'));
+    $erros = DateTimeImmutable::getLastErrors();
+    if (!$data || ($erros !== false && ($erros['warning_count'] > 0 || $erros['error_count'] > 0))) {
+        throw new RuntimeException("{$campo} inválida.");
+    }
+    $agora = new DateTimeImmutable('now', new DateTimeZone('America/Sao_Paulo'));
+    if ($data > $agora) {
+        throw new RuntimeException("{$campo} não pode estar no futuro.");
+    }
+    return $data->format('Y-m-d H:i:00');
+}
+
+function encerrarPeriodoMesa(PDO $pdo, int $mesaId, string $fim): void {
+    $stmt = $pdo->prepare("SELECT id, inicio FROM mesa_ocupacoes WHERE mesa_id = ? AND fim IS NULL ORDER BY inicio DESC, id DESC LIMIT 1 FOR UPDATE");
+    $stmt->execute([$mesaId]);
+    $periodo = $stmt->fetch();
+    if (!$periodo) return;
+    if ($fim < $periodo['inicio']) {
+        throw new RuntimeException('A data informada é anterior ao início do período atual da mesa.');
+    }
+    $stmt = $pdo->prepare('UPDATE mesa_ocupacoes SET fim = ? WHERE id = ?');
+    $stmt->execute([$fim, $periodo['id']]);
+}
+
+function iniciarPeriodoMesa(PDO $pdo, int $mesaId, string $situacao, ?string $servidor, string $inicio): void {
+    if (!in_array($situacao, ['ocupada', 'vazia'], true)) {
+        throw new RuntimeException('Situação de ocupação inválida.');
+    }
+    $stmt = $pdo->prepare('INSERT INTO mesa_ocupacoes (mesa_id, situacao, servidor, inicio, usuario_registro) VALUES (?, ?, ?, ?, ?)');
+    $stmt->execute([$mesaId, $situacao, $servidor, $inicio, usuarioLogado() ?? 'sistema']);
+}
+
 function garantirEstruturaManutencao($pdo) {
     $pdo->exec("ALTER TABLE manutencoes ADD COLUMN IF NOT EXISTS substituto_item_id INT NULL AFTER item_id");
     $pdo->exec("ALTER TABLE manutencoes ADD COLUMN IF NOT EXISTS substituto_mesa_origem_id INT NULL AFTER substituto_item_id");

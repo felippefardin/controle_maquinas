@@ -1,0 +1,17 @@
+AJUSTES NO FLUXO DE TROCA DURANTE MANUTENÇÃO
+
+1. Quando uma máquina de outra mesa é usada como substituta, o histórico da
+   mesa de origem registra explicitamente que ela ficou temporariamente vazia.
+
+2. Na conclusão da manutenção, o sistema continua perguntando se deve:
+   - permanecer com a máquina atual; ou
+   - retornar a máquina anterior.
+
+3. Se a máquina atual permanecer e veio de outra mesa, o sistema exige a
+   escolha da máquina que ocupará a mesa que ficou vazia. É possível escolher:
+   - a máquina que voltou da manutenção; ou
+   - outra máquina avulsa disponível do mesmo tipo.
+
+4. A decisão final e a reposição são registradas nos históricos das duas mesas.
+
+O projeto original em C:\xampp\htdocs\controle_maquinas não foi alterado.

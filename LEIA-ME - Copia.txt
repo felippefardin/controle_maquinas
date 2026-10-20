@@ -1,0 +1,28 @@
+PACOTE DE MELHORIAS - CONTROLE DE MÁQUINAS
+
+Arquivos alterados:
+- index.php
+- acoes.php
+- config.php
+- editar_item.php
+
+Como aplicar:
+1. Faça backup dos quatro arquivos de mesmo nome em C:\xampp\htdocs\controle_maquinas.
+2. Copie os quatro arquivos deste pacote para essa pasta, substituindo os existentes.
+3. Acesse o sistema e faça login.
+4. Em um equipamento ativo, clique em "Trocar", escolha um equipamento do mesmo tipo em outra mesa e confirme.
+
+Melhorias incluídas:
+- troca atômica de equipamentos ativos do mesmo tipo entre duas mesas;
+- bloqueio de troca com equipamento em manutenção;
+- registro da troca no histórico das duas mesas;
+- prevenção de patrimônio/protocolo duplicado ao criar ou editar;
+- correção de consultas que ainda usavam a coluna antiga "identificacao";
+- inclusão do token de segurança nos formulários da tela principal e de edição;
+- validação do identificador na tela de edição.
+
+Validação realizada:
+- todos os arquivos PHP do pacote passaram na verificação de sintaxe do PHP.
+
+Observação:
+O pacote foi preparado fora da pasta do XAMPP porque a autorização de gravação na pasta do site ativo não foi concedida nesta tarefa.

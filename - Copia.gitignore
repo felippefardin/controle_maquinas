@@ -1,0 +1,4 @@
+/uploads/manutencoes/*
+!/uploads/manutencoes/.gitkeep
+.env
+*.backup-*

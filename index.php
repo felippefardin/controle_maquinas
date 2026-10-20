@@ -191,7 +191,16 @@ foreach ($mesas as $mesa):
             </form>
 
             <div class="mesa-actions">
-                <span class="status-active"><span></span> Ativa</span>
+                <?php $mesaVazia = strcasecmp(trim((string) $mesa['nome']), 'Mesa vazia') === 0; ?>
+                <span class="<?= $mesaVazia ? 'badge text-bg-warning' : 'status-active' ?>"><span></span> <?= $mesaVazia ? 'Vazia' : 'Ocupada' ?></span>
+                <?php if (!$mesaVazia): ?>
+                <form action="acoes.php?acao=desocupar_mesa" method="POST" class="d-inline-flex align-items-center gap-1 ms-2" onsubmit="return confirm('Confirmar a saída deste servidor e deixar a mesa vazia?')">
+                    <?= csrfField() ?>
+                    <input type="hidden" name="id" value="<?= (int) $mesa['id'] ?>">
+                    <input type="datetime-local" name="data_saida" class="form-control form-control-sm" value="<?= date('Y-m-d\TH:i') ?>" max="<?= date('Y-m-d\TH:i') ?>" required aria-label="Data e hora da saída" title="Data e hora da saída">
+                    <button class="btn btn-sm btn-outline-warning rounded-pill" type="submit">Desocupar</button>
+                </form>
+                <?php endif; ?>
                 <form action="acoes.php?acao=arquivar_mesa"
                       method="POST"
                       class="d-inline"

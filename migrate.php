@@ -9,6 +9,7 @@ if (PHP_SAPI !== 'cli') {
 require __DIR__ . '/config.php';
 
 garantirEstruturaManutencao($pdo);
+garantirEstruturaOcupacao($pdo);
 
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS usuarios (
