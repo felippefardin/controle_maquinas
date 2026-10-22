@@ -299,3 +299,96 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid #94
 .inventory-page .desk-list .mesa-name-form > div { align-items:stretch!important; }
 .inventory-page .desk-list .mesa-name-form > div > div,
 .inventory-page #novaMesaForm .create-desk-form > div > div { display:flex; flex-direction:column; justify-content:flex-end; }
+
+/* Acesso às pastas e separadores com maior contraste. */
+.proger-users-page .btn.proger-manage-folders {
+    width:auto;
+    min-width:190px;
+    max-width:100%;
+    height:auto;
+    min-height:40px;
+    flex:0 1 auto;
+    padding:8px 18px;
+    white-space:normal;
+    text-align:center;
+}
+.proger-users-table {
+    --bs-table-border-color:#94a3b8;
+}
+.proger-users-table > thead > tr > th {
+    background:#e2e8f0;
+    color:#1e293b;
+    border-bottom:2px solid #64748b;
+}
+.proger-users-table > tbody > tr > td { border-bottom:1px solid #94a3b8; }
+.proger-users-table > tbody > tr:nth-child(even) > td { background-color:#edf2f8; }
+.proger-folders-page .list-group {
+    --bs-list-group-border-color:#94a3b8;
+    --bs-list-group-border-width:1px;
+}
+.proger-folders-page .list-group-item {
+    align-items:center;
+    padding:12px 16px;
+    color:#172b46;
+}
+.proger-folders-page .list-group-item:nth-child(even) { background-color:#edf2f8; }
+.proger-folders-page .list-group-item + .list-group-item { border-top:1px solid #94a3b8; }
+.proger-folders-page .folder-catalog-row {
+    border-bottom:2px solid #94a3b8;
+    padding:16px;
+    border-radius:6px 6px 0 0;
+}
+.proger-folders-page .folder-catalog-row:nth-of-type(even) { background-color:#edf2f8; }
+
+/* Campos e ações de pastas na mesma linha. */
+.proger-folders-page form.d-flex {
+    align-items:center;
+    flex-wrap:wrap;
+}
+.proger-folders-page form.d-flex > .form-control,
+.proger-folders-page form.d-flex > .form-select {
+    flex:1 1 260px;
+    width:auto;
+    min-width:0;
+    height:40px;
+}
+.proger-folders-page form.d-flex > .btn {
+    flex:0 0 auto;
+    min-height:40px;
+    white-space:nowrap;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+}
+.proger-folders-page .folder-catalog-row {
+    display:flex;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:10px;
+}
+.proger-folders-page .folder-catalog-row > form:first-child {
+    flex:1 1 520px;
+    margin:0;
+}
+.proger-folders-page .folder-catalog-row > form.mt-2 {
+    flex:0 0 auto;
+    margin:0!important;
+}
+.proger-folders-page .folder-catalog-row > form > span {
+    flex:0 0 95px;
+    white-space:nowrap;
+}
+.proger-folders-page .folder-catalog-row > form.mt-2 > .btn {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    height:40px;
+    padding:6px 12px;
+    font-size:14px;
+    white-space:nowrap;
+}
+@media(max-width:575px) {
+    .proger-folders-page form.d-flex > .form-control,
+    .proger-folders-page form.d-flex > .form-select { flex-basis:100%; width:100%; }
+    .proger-folders-page .folder-catalog-row > form:first-child { flex-basis:100%; }
+}

@@ -48,7 +48,7 @@ $contagem = $pdo->query('SELECT COUNT(*) AS total, COUNT(CASE WHEN arquivado_em 
 require 'header.php';
 ?>
 <main class="proger-users-page">
-<h1>Usuários Proger</h1>
+<h1>Usuários Proger</h1><p><a class="btn btn-primary proger-manage-folders" href="pastas.php">Gerenciar pastas</a></p>
 <p>Cadastre os servidores que ocupam as mesas. Excluir arquiva o cadastro e preserva seus históricos.</p>
 <?php if ($erro): ?><div class="alert alert-danger" role="alert"><?= e($erro) ?></div><?php endif; ?>
 <?php if (isset($_GET['salvo'])): ?><div class="alert alert-success" role="status">Cadastro atualizado.</div><?php endif; ?>
@@ -65,7 +65,7 @@ require 'header.php';
 <?php foreach ($usuarios as $u): ?><tr><td>
 <?php if (!$arquivados): ?><form method="POST" class="d-flex gap-2 proger-edit-form"><?= csrfField() ?><input type="hidden" name="acao" value="editar"><input type="hidden" name="id" value="<?= (int) $u['id'] ?>"><input aria-label="Usuário do servidor" class="form-control" name="usuario" value="<?= e($u['usuario']) ?>" pattern="[a-zA-Z0-9._-]+" maxlength="255" required><button class="btn btn-outline-primary">Salvar edição</button></form>
 <?php else: ?><?= e($u['usuario']) ?><small class="d-block">Arquivado em <?= e(date('d/m/Y H:i', strtotime($u['arquivado_em']))) ?></small><?php endif; ?>
-</td><td><div class="proger-row-actions"><a class="btn btn-outline-info" href="historico_proger.php?id=<?= (int) $u['id'] ?>">Histórico</a><form method="POST" <?= !$arquivados ? 'onsubmit="return confirm(\'Arquivar este servidor e desocupar suas mesas? Os históricos serão preservados.\')"' : '' ?>><?= csrfField() ?><input type="hidden" name="id" value="<?= (int) $u['id'] ?>"><input type="hidden" name="acao" value="<?= $arquivados ? 'restaurar' : 'arquivar' ?>"><button class="btn btn-outline-<?= $arquivados ? 'success' : 'danger' ?>"><?= $arquivados ? 'Restaurar' : 'Excluir e arquivar' ?></button></form></div></td></tr><?php endforeach; ?>
+</td><td><div class="proger-row-actions"><a class="btn btn-outline-primary" href="pastas.php?usuario_id=<?= (int) $u['id'] ?>">Pastas de acesso</a><a class="btn btn-outline-info" href="historico_proger.php?id=<?= (int) $u['id'] ?>">Histórico</a><form method="POST" <?= !$arquivados ? 'onsubmit="return confirm(\'Arquivar este servidor e desocupar suas mesas? Os históricos serão preservados.\')"' : '' ?>><?= csrfField() ?><input type="hidden" name="id" value="<?= (int) $u['id'] ?>"><input type="hidden" name="acao" value="<?= $arquivados ? 'restaurar' : 'arquivar' ?>"><button class="btn btn-outline-<?= $arquivados ? 'success' : 'danger' ?>"><?= $arquivados ? 'Restaurar' : 'Excluir e arquivar' ?></button></form></div></td></tr><?php endforeach; ?>
 </tbody></table></div>
 </main>
 <?php require 'footer.php'; ?>
