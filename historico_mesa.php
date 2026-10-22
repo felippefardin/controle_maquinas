@@ -45,7 +45,7 @@ $periodos = $stmtPeriodos->fetchAll();
             ?>
                 <tr>
                     <td><span class="badge <?= $periodo['situacao'] === 'vazia' ? 'text-bg-warning' : 'text-bg-success' ?>"><?= $periodo['situacao'] === 'vazia' ? 'Vazia' : 'Ocupada' ?></span></td>
-                    <td><?= e($periodo['servidor'] ?: '—') ?></td>
+                    <td><?php if (!empty($periodo['usuario_proger_id'])): ?><a href="historico_proger.php?id=<?= (int) $periodo['usuario_proger_id'] ?>"><?= e($periodo['servidor']) ?></a><?php else: ?><?= e($periodo['servidor'] ?: '—') ?><?php endif; ?></td>
                     <td><?= $inicio->format('d/m/Y H:i') ?></td>
                     <td><?= !empty($periodo['fim']) ? $fim->format('d/m/Y H:i') : 'Em andamento' ?></td>
                     <td><?= (int) $dias ?> dia(s)</td>

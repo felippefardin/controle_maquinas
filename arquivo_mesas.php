@@ -7,7 +7,7 @@ $stmt = $pdo->query("SELECT * FROM mesas WHERE status IN ('arquivado', 'deletado
 $mesas_arquivadas = $stmt->fetchAll();
 ?>
 
-<div class="container mt-4">
+<div class="container mt-4 archive-page">
     <h2 class="mb-4">📦 Arquivo de Mesas Removidas</h2>
     <a href="index.php" class="btn btn-secondary mb-3">Voltar para o Painel</a>
 
@@ -15,12 +15,13 @@ $mesas_arquivadas = $stmt->fetchAll();
         <input type="text" id="campoBusca" class="form-control" placeholder="Buscar por ID ou nome da mesa..." onkeyup="filtrarArquivos()">
     </div>
 
-    <table class="table table-striped bg-white shadow-sm rounded">
+    <div class="archive-table-wrap">
+    <table class="table table-striped bg-white archive-table">
         <thead>
             <tr>
-                <th>ID</th>
-                <th>Nome da Mesa</th>
-                <th>Ação</th>
+                <th scope="col" class="archive-id">ID</th>
+                <th scope="col" class="archive-name">Nome da Mesa</th>
+                <th scope="col" class="archive-action-column">Ações</th>
             </tr>
         </thead>
         <tbody id="tabelaMesas">
@@ -32,17 +33,20 @@ $mesas_arquivadas = $stmt->fetchAll();
                     <td><?= (int) $mesa['id'] ?></td>
                     <td><?= htmlspecialchars($mesa['nome'], ENT_QUOTES, 'UTF-8') ?></td>
                     <td>
+                        <div class="archive-actions">
                         <form action="acoes.php?acao=reativar_mesa" method="POST" class="d-inline">
                             <input type="hidden" name="id" value="<?= (int) $mesa['id'] ?>">
                             <button class="btn btn-sm btn-success">Reativar</button>
                         </form>
                         <a href="historico_mesa.php?id=<?= (int) $mesa['id'] ?>" class="btn btn-sm btn-info">Ver Histórico</a>
+                        </div>
                     </td>
                 </tr>
                 <?php endforeach; ?>
             <?php endif; ?>
         </tbody>
     </table>
+    </div>
 </div>
 
 <script>

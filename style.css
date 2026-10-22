@@ -113,7 +113,11 @@ a.stat-card:hover{border-color:#b9cae7;background:#fcfdff;color:var(--cm-ink)}
 .highlight{background-color:#fff3cd!important;border:2px solid #ffeeba!important}
 .item-row{border-bottom:1px solid #dee2e6;padding:8px 0}.item-row:last-child{border-bottom:none}
 a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid #94b1fa;outline-offset:3px}
-@media(min-width:1600px){.app-container,.app-topbar,.app-nav{max-width:1480px}}
+/* Desktop: o painel e as páginas internas acompanham a largura da janela. */
+@media(min-width:992px){
+    .container,.app-topbar,.app-nav{width:100%;max-width:none}
+    .app-container>.container{padding-left:0;padding-right:0}
+}
 @media(max-width:1100px){.equipment-row{flex-wrap:wrap;gap:8px}.equipment-actions{margin-left:39px}.inventory-search{width:360px}.stat-card{padding:18px 15px;gap:10px}.stat-icon{width:38px;height:38px}.stat-label{font-size:11px}.mesa-name-form{flex-basis:40%}.inventory-page .mesa-name{width:180px}.status-active{display:none}}
 @media(max-width:767px){.app-topbar{height:76px;padding:0 20px}.app-nav{padding:0 20px;gap:22px}.app-nav-link{font-size:12px;padding-top:10px;padding-bottom:12px}.app-brand{font-size:14px}.app-brand small{font-size:10px}.brand-mark{width:36px;height:36px}.account-name{display:none}.app-container{padding:26px 20px 40px!important}.page-heading{align-items:flex-start;margin-bottom:22px}.page-heading h1{font-size:25px;letter-spacing:-.7px}.page-description{font-size:12px;max-width:330px}.eyebrow{font-size:9px}.inventory-page .new-desk-button{font-size:12px;min-height:38px;padding:8px 12px}.inventory-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:26px}.stat-card{padding:16px;gap:12px}.stat-value{font-size:25px}.inventory-toolbar{align-items:stretch;flex-direction:column;gap:15px}.inventory-search{width:100%}.mesa-heading{flex-wrap:wrap;padding:14px 16px;gap:10px}.mesa-name-form{flex-basis:100%}.inventory-page .mesa-name{width:auto;flex:1}.mesa-actions{width:100%;justify-content:flex-end}.status-active{display:flex;margin-right:auto}.mesa-content{padding:0 16px 6px}.equipment-toolbar>span{font-size:9px;letter-spacing:.5px}.equipment-toolbar .btn{font-size:10px}.equipment-actions{margin-left:0}.equipment-info .font-monospace{flex-basis:100%;padding-left:39px;margin-top:-4px}.create-desk-panel{flex-direction:column;align-items:stretch;gap:16px}.create-desk-form{flex-wrap:wrap}.create-desk-field{flex:1;min-width:140px}.inventory-page .modal-dialog{margin:16px}}
 @media(max-width:420px){.app-topbar{padding:0 14px}.app-container{padding:22px 14px 36px!important}.app-nav{padding:0 14px}.page-heading{flex-wrap:wrap;gap:14px}.page-heading h1{font-size:26px}.stat-card{padding:14px 10px;gap:8px}.stat-icon{width:32px;height:36px}.stat-icon .cm-icon{width:20px}.stat-arrow{display:none}.equipment-toolbar{flex-wrap:wrap}.mesa-actions .btn{font-size:10px}.status-active{margin-right:4px}.equipment-actions{gap:4px}.equipment-actions .btn{padding:5px 6px!important}}
@@ -227,3 +231,71 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid #94
     .loose-actions .btn { min-height: 38px; padding: 6px 15px; font-size: 12px; }
     .loose-table-footer { padding: 13px 17px; }
 }
+
+/* Tabela do arquivo: colunas espaçadas e ações agrupadas. */
+.archive-table-wrap{overflow-x:auto;border:1px solid var(--cm-line);border-radius:12px;background:#fff;box-shadow:0 2px 6px #202e4408}
+.archive-table{width:100%;min-width:600px;table-layout:fixed;margin-bottom:0}
+.archive-table>:not(caption)>*>*{padding:20px 28px;vertical-align:middle;border-bottom-color:var(--cm-line)}
+.archive-table thead th{padding-top:18px;padding-bottom:18px;color:var(--cm-muted);font-size:13px;font-weight:600;background:#f8faff}
+.archive-table .archive-id{width:12%}
+.archive-table .archive-name{width:58%}
+.archive-table .archive-action-column{width:30%}
+.archive-table td:nth-child(2){overflow-wrap:anywhere}
+.archive-table tbody tr:last-child td{border-bottom:0}
+.archive-actions{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
+.archive-actions form{margin:0}
+.archive-actions .btn{padding:8px 14px;border-radius:7px;white-space:nowrap}
+@media(max-width:767px){.archive-table>:not(caption)>*>*{padding:16px}.archive-table .archive-name{width:48%}.archive-table .archive-action-column{width:40%}.archive-actions{gap:8px}}
+
+/* Usuários Proger: controles com dimensões consistentes. */
+.proger-users-page .btn { display:inline-flex; align-items:center; justify-content:center; flex:0 0 148px; width:148px; height:38px; padding:6px 12px; font-size:14px; line-height:1.5; white-space:nowrap; }
+.proger-users-page .form-control { height:38px; min-width:0; }
+.proger-edit-form { align-items:center; margin:0; }
+.proger-edit-form .form-control { flex:1 1 auto; }
+.proger-row-actions { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.proger-row-actions form { margin:0; }
+.proger-users-table th:first-child { width:65%; }
+.proger-users-table td { padding:10px 8px; }
+.proger-record-count { margin-bottom:16px; }
+@media(max-width:767px) {
+    .proger-users-table { min-width:620px; }
+    .proger-users-table th:first-child { width:60%; }
+}
+
+/* Ajustes restritos aos cartões e ao cadastro de mesas da visão geral. */
+.inventory-page .desk-list .mesa-heading { display:flex; flex-direction:column; align-items:stretch; gap:14px; }
+.inventory-page .desk-list .desk-identity { min-width:0; }
+.inventory-page .desk-list .desk-current-user { display:flex; align-items:center; gap:10px; min-width:0; }
+.inventory-page .desk-list .desk-current-user strong { overflow-wrap:anywhere; font-size:16px; }
+.inventory-page .desk-list .desk-user-editor { margin-top:10px; }
+.inventory-page .desk-list .desk-user-editor summary { width:fit-content; cursor:pointer; color:var(--cm-blue); font-size:13px; padding:5px 0; }
+.inventory-page .desk-list .mesa-name-form { display:flex; flex-wrap:wrap; align-items:flex-end; gap:12px; padding-top:8px; min-width:0; }
+.inventory-page .desk-list .mesa-name-form > div { display:grid!important; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px!important; flex:1 1 480px; margin:0!important; min-width:0; }
+.inventory-page .desk-list .mesa-name-form > div > div { min-width:0; }
+.inventory-page .desk-list .mesa-name-form .form-label { display:block; font-size:12px; margin-bottom:6px; }
+.inventory-page .desk-list .mesa-name-form .form-control,
+.inventory-page .desk-list .mesa-name-form .form-select { width:100%; height:38px; min-width:0; }
+.inventory-page .desk-list .mesa-name-form small { display:block; font-size:11px; margin-top:5px; }
+.inventory-page .desk-list .mesa-name-form .mesa-save { flex:0 0 auto; align-self:flex-end; min-height:38px; padding:6px 16px!important; border-color:var(--cm-line)!important; }
+.inventory-page .desk-list .mesa-actions { width:100%; min-width:0; justify-content:flex-end; flex-wrap:wrap; gap:8px; padding-top:12px; border-top:1px solid var(--cm-line); }
+.inventory-page .desk-list .mesa-actions > form { margin:0!important; max-width:100%; }
+.inventory-page .desk-list .mesa-actions > form.d-inline-flex { flex-wrap:wrap; gap:8px!important; }
+.inventory-page .desk-list .mesa-actions input[type="datetime-local"] { width:205px; max-width:100%; min-width:0; flex:1 1 180px; }
+.inventory-page .desk-list .mesa-actions .status-active { display:inline-flex; margin-right:auto; }
+.inventory-page #novaMesaForm .create-desk-form { flex-wrap:wrap; min-width:0; }
+.inventory-page #novaMesaForm .create-desk-form > div { flex:1 1 400px; display:grid!important; grid-template-columns:repeat(2,minmax(0,1fr)); min-width:0; }
+.inventory-page #novaMesaForm .create-desk-form > div > div { min-width:0; }
+.inventory-page #novaMesaForm .create-desk-form .form-control,
+.inventory-page #novaMesaForm .create-desk-form .form-select { width:100%; min-width:0; }
+@media(max-width:767px) {
+    .inventory-page .desk-list .mesa-name-form > div,
+    .inventory-page #novaMesaForm .create-desk-form > div { grid-template-columns:minmax(0,1fr); flex-basis:100%; }
+    .inventory-page .desk-list .mesa-actions { justify-content:flex-start; }
+    .inventory-page .desk-list .mesa-actions > form.d-inline-flex { flex-basis:100%; }
+    .inventory-page .desk-list .mesa-name-form .mesa-save { align-self:auto; }
+}
+
+/* Mantém os campos de servidor alinhados mesmo quando um rótulo quebra linha. */
+.inventory-page .desk-list .mesa-name-form > div { align-items:stretch!important; }
+.inventory-page .desk-list .mesa-name-form > div > div,
+.inventory-page #novaMesaForm .create-desk-form > div > div { display:flex; flex-direction:column; justify-content:flex-end; }

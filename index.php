@@ -1,6 +1,7 @@
 <?php
 include 'config.php';
 include 'header.php';
+$usuariosProger = $pdo->query('SELECT id, usuario FROM usuarios_proger WHERE arquivado_em IS NULL ORDER BY usuario')->fetchAll();
 
 $busca = isset($_GET['busca']) ? trim($_GET['busca']) : '';
 
@@ -63,7 +64,7 @@ $itensParaTroca = $pdo->query("
         <div><h2 id="create-desk-title">Adicionar uma mesa</h2><p>Crie um espaço para organizar os equipamentos.</p></div>
         <form action="acoes.php?acao=criar_mesa" method="POST" class="create-desk-form">
             <?= csrfField() ?>
-            <div class="create-desk-field"><label for="identificacao" class="form-label">Nome da mesa</label><input id="identificacao" type="text" name="identificacao" class="form-control" placeholder="Ex.: Mesa 10" required></div>
+            <?php campoProger($usuariosProger, 'nova'); ?>
             <button type="submit" class="btn btn-primary"><?= cmIcon('plus') ?> Criar mesa</button>
         </form>
     </section>
@@ -158,11 +159,13 @@ foreach ($mesas as $mesa):
 
         <div class="card-header mesa-heading">
 
+            <div class="desk-identity">
+                <div class="desk-current-user"><span class="mesa-icon"><?= cmIcon('desk') ?></span><strong><?= e($mesa['nome']) ?></strong></div>
+                <details class="desk-user-editor">
+                    <summary>Alterar servidor</summary>
             <form action="acoes.php?acao=editar_mesa"
                   method="POST"
                   class="mesa-name-form">
-                <span class="mesa-icon"><?= cmIcon('desk') ?></span>
-
                 <?= csrfField() ?>
 
                 <input
@@ -171,24 +174,15 @@ foreach ($mesas as $mesa):
                     value="<?= $mesa['id'] ?>"
                 >
 
-                <!-- Alterado name para 'nome' e value para $mesa['nome'] -->
-
-                <input
-                    type="text"
-                    name="nome"
-                    class="form-control mesa-name"
-                    aria-label="Nome da mesa"
-                    value="<?= htmlspecialchars($mesa['nome'] ?? '') ?>"
-                    required
-                    title="Editar nome da mesa"
-                >
-
+                <?php campoProger($usuariosProger, 'mesa-' . $mesa['id'], isset($mesa['usuario_proger_id']) ? (int) $mesa['usuario_proger_id'] : null); ?>
                 <button type="submit"
                         class="btn btn-sm mesa-save" title="Salvar nome da mesa">
                     Salvar
                 </button>
 
             </form>
+                </details>
+            </div>
 
             <div class="mesa-actions">
                 <?php $mesaVazia = strcasecmp(trim((string) $mesa['nome']), 'Mesa vazia') === 0; ?>

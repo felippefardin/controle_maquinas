@@ -99,17 +99,19 @@ function exibirConflitoPatrimonio(PDO $pdo, array $existente, ?int $mesaDestinoI
 
 // --- CORREÇÃO NA CRIAÇÃO DE MESA ---
 if ($acao == 'criar_mesa') {
-    $nome = textoObrigatorio($_POST['identificacao'] ?? '', 'Identificação');
+    $nome = null;
     
     $ip_mesa = ipOpcional($_POST['ip_mesa'] ?? '') ?: '0.0.0.0';
 
     $pdo->beginTransaction();
     try {
-        $stmt = $pdo->prepare("INSERT INTO mesas (nome, ip_mesa, status) VALUES (?, ?, 'ativo')");
-        $stmt->execute([$nome, $ip_mesa]);
+        $proger = selecionarProger($pdo);
+        $nome = $proger['usuario'];
+        $stmt = $pdo->prepare("INSERT INTO mesas (nome, ip_mesa, status, usuario_proger_id) VALUES (?, ?, 'ativo', ?)");
+        $stmt->execute([$nome, $ip_mesa, $proger['id']]);
         $mesa_id = (int) $pdo->lastInsertId();
         $agora = date('Y-m-d H:i:s');
-        iniciarPeriodoMesa($pdo, $mesa_id, 'ocupada', $nome, $agora);
+        iniciarPeriodoMesa($pdo, $mesa_id, 'ocupada', $nome, $agora, (int) $proger['id']);
         registrarLog($pdo, $mesa_id, "Mesa criada e ocupada por {$nome} com IP: {$ip_mesa}");
         $pdo->commit();
     } catch (Throwable $e) {
@@ -125,16 +127,19 @@ if ($acao == 'criar_mesa') {
 // --- MESAS ---
 if ($acao == 'editar_mesa') {
     $id = inteiroPositivo($_POST['id'] ?? null);
-    $novo_nome = textoObrigatorio($_POST['nome'] ?? '', 'Nome');
+    $novo_nome = null;
 
     $pdo->beginTransaction();
     try {
-        buscarMesaAtiva($pdo, $id, true);
+        $anterior = buscarMesaAtiva($pdo, $id, true);
+        $proger = selecionarProger($pdo);
+        $novo_nome = $proger['usuario'];
         $agora = date('Y-m-d H:i:s');
+        registrarLog($pdo, $id, "Ocupação alterada: {$anterior['nome']} → {$novo_nome}.");
         encerrarPeriodoMesa($pdo, $id, $agora);
-        iniciarPeriodoMesa($pdo, $id, 'ocupada', $novo_nome, $agora);
-        $stmt = $pdo->prepare("UPDATE mesas SET nome = ? WHERE id = ?");
-        $stmt->execute([$novo_nome, $id]);
+        iniciarPeriodoMesa($pdo, $id, 'ocupada', $novo_nome, $agora, (int) $proger['id']);
+        $stmt = $pdo->prepare("UPDATE mesas SET nome = ?, usuario_proger_id = ? WHERE id = ?");
+        $stmt->execute([$novo_nome, $proger['id'], $id]);
         registrarLog($pdo, $id, "Mesa ocupada por {$novo_nome}. Período iniciado em " . date('d/m/Y H:i', strtotime($agora)) . '.');
         $pdo->commit();
     } catch (Throwable $e) {
@@ -158,9 +163,9 @@ if ($acao == 'desocupar_mesa') {
         }
         encerrarPeriodoMesa($pdo, $id, $saida);
         iniciarPeriodoMesa($pdo, $id, 'vazia', null, $saida);
-        $stmt = $pdo->prepare("UPDATE mesas SET nome = 'Mesa vazia' WHERE id = ?");
-        $stmt->execute([$id]);
+        $stmt = $pdo->prepare("UPDATE mesas SET nome = 'Mesa vazia', usuario_proger_id = NULL WHERE id = ?");
         registrarLog($pdo, $id, "Servidor {$mesa['nome']} saiu em " . date('d/m/Y H:i', strtotime($saida)) . '. A mesa ficou vazia a partir desta data.');
+        $stmt->execute([$id]);
         $pdo->commit();
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();

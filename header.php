@@ -45,7 +45,7 @@ $cmCurrent = basename($_SERVER['SCRIPT_NAME'] ?? '');
         </details>
     </div>
     <nav class="app-nav" aria-label="Navegação principal">
-        <?php foreach ([['index.php', 'desk', 'Visão geral'], ['itens_avulsos.php', 'box', 'Itens avulsos'], ['maquinas_manutencao.php', 'tool', 'Manutenção'], ['arquivo_mesas.php', 'archive', 'Arquivo'], ['tutorial.php', 'book', 'Tutorial']] as [$cmHref, $cmSymbol, $cmLabel]): ?>
+        <?php foreach ([['index.php', 'desk', 'Visão geral'], ['usuarios_proger.php', 'user', 'Usuários Proger'], ['itens_avulsos.php', 'box', 'Itens avulsos'], ['maquinas_manutencao.php', 'tool', 'Manutenção'], ['arquivo_mesas.php', 'archive', 'Arquivo'], ['tutorial.php', 'book', 'Tutorial']] as [$cmHref, $cmSymbol, $cmLabel]): ?>
             <a href="<?= $cmHref ?>" class="app-nav-link<?= $cmCurrent === $cmHref ? ' is-active' : '' ?>"<?= $cmCurrent === $cmHref ? ' aria-current="page"' : '' ?>><?= cmIcon($cmSymbol) ?> <?= $cmLabel ?></a>
         <?php endforeach; ?>
     </nav>

@@ -214,9 +214,13 @@ function patrimonioDisponivel(PDO $pdo, string $patrimonio, ?int $ignorarId = nu
 function registrarLog($pdo, $mesa_id, $mensagem) {
     // Corrigido para os nomes das colunas que você criou: 'evento' e 'data'
     // Nota: 'data' é preenchido pelo banco com CURRENT_TIMESTAMP, mas pode ser passado via SQL
-    $stmt = $pdo->prepare("INSERT INTO historico_mesas (mesa_id, evento, data_alteracao) VALUES (?, ?, NOW())");
+    $vinculo = $pdo->prepare('SELECT usuario_proger_id, nome FROM mesas WHERE id = ?');
+    $vinculo->execute([$mesa_id]);
+    $ocupante = $vinculo->fetch();
+    $stmt = $pdo->prepare("INSERT INTO historico_mesas (mesa_id, evento, data_alteracao, usuario_proger_id) VALUES (?, ?, NOW(), ?)");
     $usuario = usuarioLogado() ?? 'sistema';
-    $stmt->execute([$mesa_id, "[Usuário: {$usuario}] {$mensagem}"]);
+    $contexto = !empty($ocupante['usuario_proger_id']) ? "[Servidor Proger: {$ocupante['nome']}] " : '';
+    $stmt->execute([$mesa_id, "[Usuário: {$usuario}] {$contexto}{$mensagem}", $ocupante['usuario_proger_id'] ?? null]);
 }
 
 function garantirEstruturaOcupacao(PDO $pdo): void {
@@ -261,12 +265,12 @@ function encerrarPeriodoMesa(PDO $pdo, int $mesaId, string $fim): void {
     $stmt->execute([$fim, $periodo['id']]);
 }
 
-function iniciarPeriodoMesa(PDO $pdo, int $mesaId, string $situacao, ?string $servidor, string $inicio): void {
+function iniciarPeriodoMesa(PDO $pdo, int $mesaId, string $situacao, ?string $servidor, string $inicio, ?int $progerId = null): void {
     if (!in_array($situacao, ['ocupada', 'vazia'], true)) {
         throw new RuntimeException('Situação de ocupação inválida.');
     }
-    $stmt = $pdo->prepare('INSERT INTO mesa_ocupacoes (mesa_id, situacao, servidor, inicio, usuario_registro) VALUES (?, ?, ?, ?, ?)');
-    $stmt->execute([$mesaId, $situacao, $servidor, $inicio, usuarioLogado() ?? 'sistema']);
+    $stmt = $pdo->prepare('INSERT INTO mesa_ocupacoes (mesa_id, situacao, servidor, inicio, usuario_registro, usuario_proger_id) VALUES (?, ?, ?, ?, ?, ?)');
+    $stmt->execute([$mesaId, $situacao, $servidor, $inicio, usuarioLogado() ?? 'sistema', $progerId]);
 }
 
 function garantirEstruturaManutencao($pdo) {
@@ -370,7 +374,9 @@ function salvarAnexosManutencao($pdo, $manutencao_id, $arquivos) {
     return $erros;
 }
 
+require_once __DIR__ . '/proger.php';
 if (PHP_SAPI !== 'cli' && !defined('PAGINA_PUBLICA')) {
     exigirLogin();
 }
+if (!defined('PAGINA_PUBLICA')) garantirUsuariosProger($pdo);
 ?>
